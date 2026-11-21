@@ -1,0 +1,429 @@
+/**
+ * KameraPH Theme - Matching User Reference Design
+ * Header: Vibrant Orange #d84315
+ * Body Background: Deep Slate-Navy #0b1320
+ * Cards: Clean White #ffffff
+ * Footer: Vibrant Orange #d84315
+ */
+
+:root {
+    --brand-orange: #d84315;
+    --brand-orange-dark: #bf360c;
+    --brand-navy-bg: #0b1320;
+    --brand-card-bg: #ffffff;
+    --brand-border: #e2e8f0;
+    --brand-blue: #0d6efd;
+    --brand-cyan: #06b6d4;
+    --brand-green: #10b981;
+    --brand-amber: #f59e0b;
+    --brand-purple: #8b5cf6;
+}
+
+body {
+    background-color: var(--brand-navy-bg) !important;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+/* Orange Top Navbar */
+.navbar-kamera {
+    background-color: var(--brand-orange) !important;
+    padding: 0.65rem 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.navbar-kamera .navbar-brand {
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: #ffffff !important;
+    display: flex;
+    align-items: center;
+    letter-spacing: -0.3px;
+}
+
+.navbar-kamera .navbar-brand i {
+    font-size: 1.5rem;
+    margin-right: 0.5rem;
+}
+
+.navbar-kamera .nav-link {
+    color: #000000 !important;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.5rem 0.85rem !important;
+    border-radius: 6px;
+    transition: opacity 0.15s ease;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-kamera .nav-link:hover {
+    opacity: 0.85;
+}
+
+.navbar-kamera .dropdown-menu {
+    border: none;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.navbar-kamera .dropdown-item {
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    color: #334155;
+}
+
+.navbar-kamera .dropdown-item:hover {
+    background-color: #f1f5f9;
+    color: var(--brand-orange);
+}
+
+/* Black Pill Button on Navbar */
+.btn-nav-new-listing {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 50rem !important;
+    padding: 0.45rem 1.15rem !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.btn-nav-new-listing:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+    color: #ffffff !important;
+}
+
+/* Dashboard Header & Buttons */
+.dashboard-title {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.25rem;
+}
+
+.dashboard-subtitle {
+    color: #94a3b8;
+    font-size: 0.92rem;
+    margin-bottom: 0;
+}
+
+.btn-add-listing-blue {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.5rem 1.1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(13, 110, 253, 0.3);
+}
+
+.btn-add-listing-blue:hover {
+    background-color: #0b5ed7 !important;
+    color: #ffffff !important;
+}
+
+.btn-add-model-dark {
+    background-color: #111827 !important;
+    border: 1px solid #374151 !important;
+    color: #cbd5e1 !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.5rem 1.1rem;
+    border-radius: 8px;
+}
+
+.btn-add-model-dark:hover {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+}
+
+/* White Cards */
+.card-kamera {
+    background: #ffffff !important;
+    border: none !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    color: #334155;
+    overflow: hidden;
+}
+
+.card-header-kamera {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    padding: 1.1rem 1.35rem !important;
+    font-size: 1rem;
+}
+
+/* Top Stat Cards */
+.stat-card-white {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.25rem 1.35rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    position: relative;
+    border-top: 4px solid #cbd5e1;
+    color: #334155;
+    height: 100%;
+}
+
+.stat-card-cyan {
+    border-top-color: var(--brand-cyan) !important;
+}
+
+.stat-card-green {
+    border-top-color: var(--brand-green) !important;
+}
+
+.stat-card-amber {
+    border-top-color: var(--brand-amber) !important;
+}
+
+.stat-card-purple {
+    border-top-color: var(--brand-purple) !important;
+}
+
+.stat-card-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.4rem;
+}
+
+.stat-card-number {
+    font-size: 2.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+}
+
+.stat-card-sub {
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.stat-card-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+}
+
+.stat-icon-cyan {
+    background-color: #e0f2fe;
+    color: #0284c7;
+}
+
+.stat-icon-green {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.stat-icon-amber {
+    background-color: #fef3c7;
+    color: #d97706;
+}
+
+.stat-icon-star {
+    color: #f59e0b;
+    font-size: 1.85rem;
+}
+
+/* Tables inside white cards */
+.table-kamera {
+    background: #ffffff;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+.table-kamera thead th {
+    background-color: #ffffff;
+    color: #64748b;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.95rem 1.1rem;
+    font-weight: 700;
+}
+
+.table-kamera tbody td {
+    vertical-align: middle;
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+
+.table-kamera tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+/* Thumbnail */
+.listing-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #f1f5f9;
+    display: inline-block;
+}
+
+/* Model pill tag */
+.badge-model-pill {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #334155;
+    display: inline-block;
+}
+
+/* Price text */
+.price-bold {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.95rem;
+}
+
+/* Badges */
+.badge-condition-good {
+    background-color: #15803d !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.badge-condition-excellent {
+    background-color: #0d9488 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.badge-condition-mint {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.badge-status-live {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.badge-status-pending {
+    background-color: #f59e0b !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.badge-status-verified {
+    background-color: #16a34a !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+/* Quick Management List */
+.quick-manage-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 0.9rem;
+    transition: background 0.15s ease;
+}
+
+.quick-manage-item:hover {
+    background-color: #f8fafc;
+    color: #0f172a;
+}
+
+.quick-manage-badge {
+    background-color: #64748b;
+    color: #ffffff;
+    border-radius: 50rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 8px;
+}
+
+/* Verification Card in Right Column */
+.verification-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+/* Footer Banner */
+.footer-orange {
+    background-color: var(--brand-orange) !important;
+    padding: 1.1rem 0;
+    color: #1c1917;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: auto;
+}
+
+.footer-orange a {
+    color: #1c1917 !important;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 1.25rem;
+    transition: opacity 0.15s;
+}
+
+.footer-orange a:hover {
+    opacity: 0.75;
+}
