@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth('admin'); // Admin login required
 
 $pageTitle = 'Add Category';
 $activeMenu = 'category';
@@ -46,7 +48,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Categories</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Category</li>
             </ol>

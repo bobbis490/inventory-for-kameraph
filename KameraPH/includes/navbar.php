@@ -15,7 +15,12 @@ $active = $activeMenu ?? '';
         <div class="collapse navbar-collapse" id="kameraNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($active === 'dashboard') ? 'active' : ''; ?>" href="<?php echo base_url(); ?>">
+                    <a class="nav-link <?php echo ($active === 'home') ? 'active' : ''; ?>" href="<?php echo base_url(); ?>">
+                        <i class="bi bi-house-door me-1"></i> Home
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?php echo ($active === 'dashboard') ? 'active' : ''; ?>" href="<?php echo base_url('dashboard.php'); ?>">
                         <i class="bi bi-speedometer2 me-1"></i> Dashboard
                     </a>
                 </li>
@@ -38,7 +43,7 @@ $active = $activeMenu ?? '';
                         </li>
                         <li>
                             <a class="dropdown-item d-flex align-items-center <?php echo ($active === 'product_model') ? 'active' : ''; ?>" href="<?php echo base_url('product_model/index.php'); ?>">
-                                <i class="bi bi-camera2 me-2 text-info"></i> Camera Models
+                                <i class="bi bi-camera2 me-2 text-info"></i> Equipment Models
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -99,10 +104,39 @@ $active = $activeMenu ?? '';
                 </li>
             </ul>
 
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center gap-2">
                 <a href="<?php echo base_url('product_listing/add.php'); ?>" class="btn-nav-new-listing text-decoration-none">
-                    <i class="bi bi-plus-circle me-2"></i> New Listing
+                    <i class="bi bi-plus-circle me-1"></i> New Listing
                 </a>
+
+                <?php 
+                $currentUser = current_user();
+                if ($currentUser): 
+                ?>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-light dropdown-toggle d-flex align-items-center" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span><?php echo sanitize($currentUser['FirstName']); ?></span>
+                            <?php if (!empty($currentUser['AdminRole'])): ?>
+                                <span class="badge bg-warning text-dark ms-1 small" style="font-size:0.7rem;"><?php echo sanitize($currentUser['AdminRole']); ?></span>
+                            <?php endif; ?>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><h6 class="dropdown-header"><?php echo sanitize($currentUser['Email']); ?></h6></li>
+                            <li><span class="dropdown-item-text small text-muted">Role: <strong><?php echo ucfirst(sanitize($currentUser['Role'])); ?></strong></span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="<?php echo base_url('profile.php'); ?>"><i class="bi bi-person me-2"></i>My Profile</a></li>
+                            <li><a class="dropdown-item" href="<?php echo base_url(); ?>"><i class="bi bi-shop me-2"></i>Marketplace Home</a></li>
+                            <li><a class="dropdown-item" href="<?php echo base_url('dashboard.php'); ?>"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="<?php echo base_url('logout.php'); ?>"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</a></li>
+                        </ul>
+                    </div>
+                <?php else: ?>
+                    <a href="<?php echo base_url('login.php'); ?>" class="btn btn-sm btn-outline-warning fw-semibold">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     </div>

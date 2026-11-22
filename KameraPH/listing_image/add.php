@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Admin or Seller
 
 $pageTitle = 'Add Listing Image';
 $activeMenu = 'listing_image';
@@ -27,6 +29,17 @@ if (is_dir($uploadsDir)) {
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $listingID = (int)($_POST['ListingID'] ?? 0);
+    $currUser = current_user();
+    if (!is_admin() && !empty($currUser['SellerID'])) {
+        $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+        $chkOwner->bind_param("i", $listingID);
+        $chkOwner->execute();
+        $lRow = $chkOwner->get_result()->fetch_assoc();
+        $chkOwner->close();
+        if (!$lRow || (int)$lRow['SellerID'] !== (int)$currUser['SellerID']) {
+            $message = "Access denied: you can only upload photos to listings belonging to your store.";
+        }
+    }
     $urlInput = trim($_POST['ImageURL'] ?? '');
     $existingSelect = trim($_POST['ExistingImage'] ?? '');
     $displayOrder = (int)($_POST['DisplayOrder'] ?? 1);
@@ -104,7 +117,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $conn->commit();
                 flash('success', "Image saved and linked to Listing #{$listingID} successfully!");
-                redirect("listing_image/index.php?listing_id={$listingID}");
+                redirect("product_listing/view.php?id={$listingID}");
             } catch (Exception $e) {
                 $conn->rollback();
                 $message = "Error saving image: " . $e->getMessage();
@@ -113,7 +126,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+$currUser = current_user();
+if (!is_admin() && !empty($currUser['SellerID'])) {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$currUser['SellerID'] . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -122,7 +140,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-9 col-lg-7">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Listing Images</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Photo</li>
             </ol>

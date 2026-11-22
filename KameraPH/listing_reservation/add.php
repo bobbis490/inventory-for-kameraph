@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Requires login (admin, seller, or customer)
 
 $pageTitle = 'Add Listing Reservation';
 $activeMenu = 'listing_reservation';
@@ -23,12 +25,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $reservedTime = strtotime($reservedInput);
     $expiresTime = strtotime($expiresInput);
 
-    if ($listingID <= 0) {
-        $message = "Please select a product listing.";
+    // Validate listing & inventory availability
+    $chkListing = $conn->prepare("SELECT Quantity, Status FROM product_listing WHERE ListingID = ?");
+    $chkListing->bind_param("i", $listingID);
+    $chkListing->execute();
+    $lRow = $chkListing->get_result()->fetch_assoc();
+    $chkListing->close();
+
+    if ($listingID <= 0 || !$lRow) {
+        $message = "Please select a valid product listing.";
     } elseif ($orderID <= 0) {
         $message = "Please specify a valid Order ID.";
     } elseif ($quantity < 1) {
         $message = "Hold quantity must be at least 1.";
+    } elseif ($status === 'Reserved' && $quantity > (int)$lRow['Quantity']) {
+        $message = "Cannot hold {$quantity} units. Only {$lRow['Quantity']} units are currently in stock.";
     } elseif (!$reservedTime || !$expiresTime) {
         $message = "Please enter valid reservation and expiration dates.";
     } elseif ($expiresTime <= $reservedTime) {
@@ -45,8 +56,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt->execute()) {
             $stmt->close();
+
+            // Deduct held quantity from listing stock
+            if ($status === 'Reserved') {
+                $newQty = max(0, (int)$lRow['Quantity'] - $quantity);
+                $newStatus = ($newQty === 0) ? 'Reserved' : $lRow['Status'];
+                $updListing = $conn->prepare("UPDATE product_listing SET Quantity = ?, Status = ? WHERE ListingID = ?");
+                $updListing->bind_param("isi", $newQty, $newStatus, $listingID);
+                $updListing->execute();
+                $updListing->close();
+            }
+
             flash('success', "Reservation created for Order #{$orderID} successfully!");
-            redirect("listing_reservation/index.php?listing_id={$listingID}");
+            redirect("product_listing/view.php?id={$listingID}");
         } else {
             $message = "Error creating reservation: " . $stmt->error;
             $stmt->close();
@@ -54,8 +76,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+$listings = $conn->query("SELECT ListingID, Title, Quantity FROM product_listing ORDER BY Title ASC");
 $statuses = ["Reserved", "Completed", "Cancelled", "Expired"];
+if (empty($orderID)) {
+    $orderID = rand(1001, 9999);
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -64,7 +89,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Reservations</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Hold</li>
             </ol>
@@ -92,7 +117,7 @@ require_once __DIR__ . '/../includes/header.php';
                             <?php if ($listings): ?>
                                 <?php while ($l = $listings->fetch_assoc()): ?>
                                     <option value="<?php echo $l['ListingID']; ?>" <?php echo ($listingID == $l['ListingID']) ? 'selected' : ''; ?>>
-                                        #<?php echo $l['ListingID']; ?> - <?php echo sanitize($l['Title']); ?>
+                                        #<?php echo $l['ListingID']; ?> - <?php echo sanitize($l['Title']); ?> (<?php echo (int)$l['Quantity']; ?> in stock)
                                     </option>
                                 <?php endwhile; ?>
                             <?php endif; ?>
@@ -103,6 +128,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="col-sm-6">
                             <label for="OrderID" class="form-label">Order ID <span class="text-danger">*</span></label>
                             <input type="number" name="OrderID" id="OrderID" class="form-control" min="1" placeholder="e.g. 5001" value="<?php echo sanitize($orderID); ?>" required>
+                            <div class="form-text">Customer reservation or checkout reference number.</div>
                         </div>
                         <div class="col-sm-6">
                             <label for="Quantity" class="form-label">Quantity Reserved <span class="text-danger">*</span></label>
@@ -133,7 +159,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center pt-2">
-                        <a href="index.php<?php echo ($listingID > 0) ? '?listing_id=' . $listingID : ''; ?>" class="btn btn-outline-secondary">
+                        <a href="<?php echo ($listingID > 0) ? base_url('product_listing/view.php?id=' . $listingID) : 'index.php'; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-1"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-primary px-4 shadow-sm">

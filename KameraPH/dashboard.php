@@ -1,124 +1,100 @@
 <?php
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/functions.php';
+require_auth('admin'); // Admin login required
 
-$curUser = current_user();
-$isAdmin = is_admin();
-$myID    = current_seller_id();
-
-$pageTitle = $isAdmin ? 'Admin Dashboard' : 'My Seller Dashboard';
+$pageTitle = 'Dashboard';
 $activeMenu = 'dashboard';
 
-// Scope: admin sees all, seller sees only their own
-$sellerWhere = $isAdmin ? '' : "AND pl.SellerID = {$myID}";
-$sellerJoinWhere = $isAdmin ? '' : "WHERE pl.SellerID = {$myID}";
-
-// Stats scoped to current user
+// Fetch Statistics safely
 $stats = [
-    'listings' => 0, 'live_listings' => 0,
-    'brands' => 0, 'models' => 0, 'categories' => 0,
-    'pending_verifications' => 0, 'active_reservations' => 0,
-    'reviews' => 0, 'avg_rating' => 0.0
+    'listings' => 0,
+    'live_listings' => 0,
+    'brands' => 0,
+    'models' => 0,
+    'categories' => 0,
+    'pending_verifications' => 0,
+    'active_reservations' => 0,
+    'reviews' => 0,
+    'avg_rating' => 0.0
 ];
 
-if ($res = $conn->query("SELECT COUNT(*) AS total, SUM(CASE WHEN Status = 'Live' THEN 1 ELSE 0 END) AS live_total FROM product_listing pl WHERE 1=1 {$sellerWhere}")) {
+if ($res = $conn->query("SELECT COUNT(*) AS total, SUM(CASE WHEN Status = 'Live' THEN 1 ELSE 0 END) AS live_total FROM product_listing")) {
     $row = $res->fetch_assoc();
-    $stats['listings']      = (int)($row['total'] ?? 0);
+    $stats['listings'] = (int)($row['total'] ?? 0);
     $stats['live_listings'] = (int)($row['live_total'] ?? 0);
 }
 
-if ($isAdmin) {
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM brand")) $stats['brands'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_model")) $stats['models'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM category")) $stats['categories'] = (int)($res->fetch_assoc()['total'] ?? 0);
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM brand")) {
+    $stats['brands'] = (int)($res->fetch_assoc()['total'] ?? 0);
 }
 
-$verifyScope = $isAdmin ? '' : "INNER JOIN product_listing pl ON pv.ListingID = pl.ListingID WHERE pl.SellerID = {$myID} AND pv.VerificationStatus = 'Pending'";
-if (!$isAdmin) {
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_verification pv {$verifyScope}")) {
-        $stats['pending_verifications'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    }
-} else {
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_verification WHERE VerificationStatus = 'Pending'")) {
-        $stats['pending_verifications'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    }
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_model")) {
+    $stats['models'] = (int)($res->fetch_assoc()['total'] ?? 0);
 }
 
-$resScope = $isAdmin ? '' : "INNER JOIN product_listing pl ON lr.ListingID = pl.ListingID WHERE pl.SellerID = {$myID} AND lr.Status = 'Reserved'";
-if (!$isAdmin) {
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM listing_reservation lr {$resScope}")) {
-        $stats['active_reservations'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    }
-} else {
-    if ($res = $conn->query("SELECT COUNT(*) AS total FROM listing_reservation WHERE Status = 'Reserved'")) {
-        $stats['active_reservations'] = (int)($res->fetch_assoc()['total'] ?? 0);
-    }
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM category")) {
+    $stats['categories'] = (int)($res->fetch_assoc()['total'] ?? 0);
+}
+
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_verification WHERE VerificationStatus = 'Pending'")) {
+    $stats['pending_verifications'] = (int)($res->fetch_assoc()['total'] ?? 0);
+}
+
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM listing_reservation WHERE Status = 'Reserved'")) {
+    $stats['active_reservations'] = (int)($res->fetch_assoc()['total'] ?? 0);
 }
 
 if ($res = $conn->query("SELECT COUNT(*) AS total, AVG(RatingValue) AS avg_rate FROM product_review")) {
     $row = $res->fetch_assoc();
-    $stats['reviews']    = (int)($row['total'] ?? 0);
+    $stats['reviews'] = (int)($row['total'] ?? 0);
     $stats['avg_rating'] = round((float)($row['avg_rate'] ?? 0), 1);
 }
 
-// Recent Listings — scoped to current user
+// Fetch Recent Listings
 $recentListings = $conn->query("
     SELECT pl.*, pm.ModelName, b.BrandName,
-           (SELECT ImageURL FROM listing_image WHERE ListingID = pl.ListingID AND IsPrimary = 1 LIMIT 1) AS PrimaryImage
+           (SELECT ImageURL FROM listing_image WHERE ListingID = pl.ListingID ORDER BY IsPrimary DESC, DisplayOrder ASC LIMIT 1) AS PrimaryImage
     FROM product_listing pl
     INNER JOIN product_model pm ON pl.ModelID = pm.ModelID
     INNER JOIN brand b ON pm.BrandID = b.BrandID
-    WHERE 1=1 {$sellerWhere}
     ORDER BY pl.ListingID DESC
     LIMIT 6
 ");
 
-// Recent Verifications — scoped to current user's listings
-if ($isAdmin) {
-    $recentVerifications = $conn->query("
-        SELECT pv.*, pl.Title
-        FROM product_verification pv
-        INNER JOIN product_listing pl ON pv.ListingID = pl.ListingID
-        ORDER BY pv.VerificationID DESC LIMIT 5
-    ");
-} else {
-    $recentVerifications = $conn->query("
-        SELECT pv.*, pl.Title
-        FROM product_verification pv
-        INNER JOIN product_listing pl ON pv.ListingID = pl.ListingID
-        WHERE pl.SellerID = {$myID}
-        ORDER BY pv.VerificationID DESC LIMIT 5
-    ");
-}
+// Fetch Recent Verifications
+$recentVerifications = $conn->query("
+    SELECT pv.*, pl.Title
+    FROM product_verification pv
+    INNER JOIN product_listing pl ON pv.ListingID = pl.ListingID
+    ORDER BY pv.VerificationID DESC
+    LIMIT 5
+");
+
+$curr = current_user();
+$adminName = $curr['FullName'] ?? ($curr['FirstName'] ?? 'Admin');
+$adminRole = $curr['AdminRole'] ?? 'Administrator';
 
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
     <div>
-        <?php if ($isAdmin): ?>
-            <h2 class="dashboard-title">
-                <i class="bi bi-shield-shaded text-danger me-2"></i>Admin Dashboard
-            </h2>
-            <p class="dashboard-subtitle">Full platform overview &bull; All sellers &bull; All data</p>
-        <?php else: ?>
-            <h2 class="dashboard-title">
-                <i class="bi bi-person-circle text-warning me-2"></i><?php echo sanitize($curUser['name']); ?>'s Dashboard
-            </h2>
-            <p class="dashboard-subtitle">
-                <span class="badge bg-primary-subtle text-primary me-1">Seller #<?php echo $myID; ?></span>
-                <?php echo sanitize($curUser['location']); ?> &bull; Your listings &amp; operations only
-            </p>
-        <?php endif; ?>
+        <h2 class="dashboard-title">
+            <i class="bi bi-speedometer2 text-primary me-2"></i>Dashboard Overview
+        </h2>
+        <p class="dashboard-subtitle">
+            Welcome back, <strong><?php echo htmlspecialchars($adminName); ?></strong>
+            <span class="badge bg-primary ms-1"><?php echo htmlspecialchars($adminRole); ?></span>
+        </p>
     </div>
     <div class="d-flex gap-2 mt-3 mt-md-0">
         <a href="<?php echo base_url('product_listing/add.php'); ?>" class="btn-add-listing-blue text-decoration-none">
             <i class="bi bi-plus-circle me-1"></i> Add Listing
         </a>
-        <?php if ($isAdmin): ?>
         <a href="<?php echo base_url('product_model/add.php'); ?>" class="btn-add-model-dark text-decoration-none">
             <i class="bi bi-camera me-1"></i> Add Model
         </a>
-        <?php endif; ?>
     </div>
 </div>
 
@@ -128,7 +104,7 @@ require_once __DIR__ . '/includes/header.php';
         <div class="stat-card-white stat-card-cyan">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="stat-card-label"><?php echo $isAdmin ? 'TOTAL LISTINGS' : 'MY LISTINGS'; ?></div>
+                    <div class="stat-card-label">TOTAL LISTINGS</div>
                     <div class="stat-card-number"><?php echo number_format($stats['listings']); ?></div>
                     <div class="stat-card-sub text-success"><i class="bi bi-check-circle me-1"></i><?php echo $stats['live_listings']; ?> Live</div>
                 </div>
@@ -139,7 +115,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
-    <?php if ($isAdmin): ?>
     <div class="col-sm-6 col-lg-3">
         <div class="stat-card-white stat-card-green">
             <div class="d-flex justify-content-between align-items-center">
@@ -154,31 +129,15 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-    <?php else: ?>
-    <div class="col-sm-6 col-lg-3">
-        <div class="stat-card-white stat-card-green">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <div class="stat-card-label">MY PROFILE</div>
-                    <div class="stat-card-number" style="font-size:1.3rem;"><?php echo sanitize($curUser['badge']); ?></div>
-                    <div class="stat-card-sub"><?php echo sanitize($curUser['location']); ?></div>
-                </div>
-                <div class="stat-card-icon-box stat-icon-green">
-                    <i class="bi bi-person-badge"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php endif; ?>
 
     <div class="col-sm-6 col-lg-3">
         <div class="stat-card-white stat-card-amber">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <div class="stat-card-label"><?php echo $isAdmin ? 'PENDING VERIFICATIONS' : 'MY VERIFICATIONS'; ?></div>
+                    <div class="stat-card-label">VERIFICATIONS</div>
                     <div class="stat-card-number"><?php echo number_format($stats['pending_verifications']); ?></div>
                     <div class="stat-card-sub text-warning fw-semibold">
-                        <?php echo ($stats['pending_verifications'] > 0) ? 'Pending Review' : 'All up to date'; ?>
+                        <?php echo ($stats['pending_verifications'] > 0) ? 'Pending Admin Action' : 'All up to date'; ?>
                     </div>
                 </div>
                 <div class="stat-card-icon-box stat-icon-amber">
@@ -281,8 +240,6 @@ require_once __DIR__ . '/includes/header.php';
                 <i class="bi bi-lightning-charge text-warning me-2 fs-5"></i>Quick Management
             </div>
             <div>
-                <?php if ($isAdmin): ?>
-                <!-- Admin: full platform management links -->
                 <a href="<?php echo base_url('brand/index.php'); ?>" class="quick-manage-item">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-tag text-primary me-2"></i>
@@ -307,7 +264,7 @@ require_once __DIR__ . '/includes/header.php';
                 <a href="<?php echo base_url('listing_reservation/index.php'); ?>" class="quick-manage-item">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-clock-history text-secondary me-2"></i>
-                        <span>All Reservations</span>
+                        <span>Reservations</span>
                     </div>
                     <span class="quick-manage-badge"><?php echo $stats['active_reservations']; ?></span>
                 </a>
@@ -318,44 +275,6 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <span class="quick-manage-badge"><?php echo $stats['reviews']; ?></span>
                 </a>
-                <?php else: ?>
-                <!-- Community Seller: only their own management links -->
-                <a href="<?php echo base_url('product_listing/index.php'); ?>" class="quick-manage-item">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-shop text-primary me-2"></i>
-                        <span>My Listings</span>
-                    </div>
-                    <span class="quick-manage-badge"><?php echo $stats['listings']; ?></span>
-                </a>
-                <a href="<?php echo base_url('listing_image/index.php'); ?>" class="quick-manage-item">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-images text-info me-2"></i>
-                        <span>My Listing Photos</span>
-                    </div>
-                    <span class="quick-manage-badge"><i class="bi bi-arrow-right-short"></i></span>
-                </a>
-                <a href="<?php echo base_url('listing_specification/index.php'); ?>" class="quick-manage-item">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-cpu text-danger me-2"></i>
-                        <span>My Specifications</span>
-                    </div>
-                    <span class="quick-manage-badge"><i class="bi bi-arrow-right-short"></i></span>
-                </a>
-                <a href="<?php echo base_url('listing_reservation/index.php'); ?>" class="quick-manage-item">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-clock-history text-secondary me-2"></i>
-                        <span>My Reservations</span>
-                    </div>
-                    <span class="quick-manage-badge"><?php echo $stats['active_reservations']; ?></span>
-                </a>
-                <a href="<?php echo base_url('product_verification/index.php'); ?>" class="quick-manage-item">
-                    <div class="d-flex align-items-center">
-                        <i class="bi bi-shield-check text-success me-2"></i>
-                        <span>My Verifications</span>
-                    </div>
-                    <span class="quick-manage-badge"><?php echo $stats['pending_verifications']; ?></span>
-                </a>
-                <?php endif; ?>
             </div>
         </div>
 

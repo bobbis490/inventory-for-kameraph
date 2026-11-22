@@ -13,6 +13,7 @@
                 <a href="<?php echo base_url('product_model/index.php'); ?>">Models</a>
                 <a href="<?php echo base_url('product_listing/index.php'); ?>">Listings</a>
                 <a href="<?php echo base_url('product_verification/index.php'); ?>">Verifications</a>
+                <a href="<?php echo base_url('api/'); ?>">API</a>
             </div>
         </div>
     </div>

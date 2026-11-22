@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Requires login (admin or listing owner)
+
+$currUser = current_user();
 
 $pageTitle = 'Edit Product Listing';
 $activeMenu = 'product_listing';
@@ -21,10 +25,16 @@ if (!$listing) {
     redirect('product_listing/index.php');
 }
 
+// Ownership check: if seller and not admin, can only edit their own listings
+if (!is_admin() && (int)$listing['SellerID'] !== (int)($currUser['SellerID'] ?? 0)) {
+    flash('danger', 'Access denied. You can only edit listings belonging to your store.');
+    redirect('product_listing/index.php');
+}
+
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $sellerID = (int)($_POST['SellerID'] ?? 0);
+    $sellerID = is_admin() ? (int)($_POST['SellerID'] ?? $listing['SellerID']) : (int)$listing['SellerID'];
     $modelID = (int)($_POST['ModelID'] ?? 0);
     $title = trim($_POST['Title'] ?? '');
     $description = trim($_POST['Description'] ?? '');
@@ -113,6 +123,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $listing['SuspensionReason'] = $suspensionReason;
 }
 
+$sellerProfiles = null;
+if (is_admin()) {
+    $sellerProfiles = $conn->query("SELECT SellerID, StoreName FROM seller_profile ORDER BY StoreName ASC");
+}
+
+// Fetch current store name
+$storeRes = $conn->query("SELECT StoreName FROM seller_profile WHERE SellerID = " . (int)$listing['SellerID']);
+$currentStoreName = ($storeRes && $sRow = $storeRes->fetch_assoc()) ? $sRow['StoreName'] : "Store #{$listing['SellerID']}";
+
 $models = $conn->query("
     SELECT pm.ModelID, pm.ModelName, b.BrandName, c.CategoryName
     FROM product_model pm
@@ -122,7 +141,7 @@ $models = $conn->query("
 ");
 
 $conditions = ['Brand New', 'Mint', 'Excellent', 'Good', 'Fair', 'With defects'];
-$statuses = ['Draft', 'Pending Verification', 'Rejected', 'Live', 'Reserved', 'Sold', 'Suspended'];
+$statuses = ['Live', 'Draft', 'Pending Verification', 'Reserved', 'Sold', 'Suspended'];
 
 require_once __DIR__ . '/../includes/header.php';
 ?>
@@ -131,7 +150,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-lg-9">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Listings</a></li>
                 <li class="breadcrumb-item"><a href="view.php?id=<?php echo $id; ?>">#<?php echo $id; ?></a></li>
                 <li class="breadcrumb-item active" aria-current="page">Edit</li>
@@ -158,10 +177,29 @@ require_once __DIR__ . '/../includes/header.php';
                         <i class="bi bi-info-circle me-1 text-primary"></i> 1. Basic Listing Information
                     </h6>
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label for="SellerID" class="form-label">Seller User ID <span class="text-danger">*</span></label>
-                            <input type="number" name="SellerID" id="SellerID" class="form-control" min="1" value="<?php echo sanitize($listing['SellerID']); ?>" required>
-                        </div>
+                        <?php if (is_admin()): ?>
+                            <div class="col-md-4">
+                                <label for="SellerID" class="form-label fw-semibold">Seller Store <span class="text-danger">*</span></label>
+                                <select name="SellerID" id="SellerID" class="form-select" required>
+                                    <?php if ($sellerProfiles): ?>
+                                        <?php while ($sp = $sellerProfiles->fetch_assoc()): ?>
+                                            <option value="<?php echo $sp['SellerID']; ?>" <?php echo ($listing['SellerID'] == $sp['SellerID']) ? 'selected' : ''; ?>>
+                                                <?php echo sanitize($sp['StoreName']); ?> (#<?php echo $sp['SellerID']; ?>)
+                                            </option>
+                                        <?php endwhile; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                        <?php else: ?>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Seller Store</label>
+                                <div class="form-control bg-light d-flex align-items-center">
+                                    <i class="bi bi-shop text-primary me-2"></i>
+                                    <strong><?php echo sanitize($currentStoreName); ?></strong>
+                                </div>
+                                <input type="hidden" name="SellerID" value="<?php echo (int)$listing['SellerID']; ?>">
+                            </div>
+                        <?php endif; ?>
                         <div class="col-md-8">
                             <label for="ModelID" class="form-label">Camera Model <span class="text-danger">*</span></label>
                             <select name="ModelID" id="ModelID" class="form-select" required>

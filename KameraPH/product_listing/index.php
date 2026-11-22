@@ -1,5 +1,9 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Requires login (admin or seller)
+
+$currUser = current_user();
 
 $pageTitle = 'Product Listings';
 $activeMenu = 'product_listing';
@@ -11,6 +15,13 @@ $conditionFilter = trim($_GET['condition'] ?? '');
 $where = [];
 $params = [];
 $types = "";
+
+// If seller, scope to their own listings
+if (!is_admin() && !empty($currUser['SellerID'])) {
+    $where[] = "pl.SellerID = ?";
+    $params[] = (int)$currUser['SellerID'];
+    $types .= "i";
+}
 
 if ($search !== '') {
     $where[] = "(pl.Title LIKE ? OR b.BrandName LIKE ? OR pm.ModelName LIKE ?)";
@@ -36,7 +47,7 @@ if ($conditionFilter !== '') {
 $whereSql = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 
 $sql = "SELECT pl.*, pm.ModelName, b.BrandName,
-               (SELECT ImageURL FROM listing_image WHERE ListingID = pl.ListingID AND IsPrimary = 1 LIMIT 1) AS PrimaryImage,
+               (SELECT ImageURL FROM listing_image WHERE ListingID = pl.ListingID ORDER BY IsPrimary DESC, DisplayOrder ASC LIMIT 1) AS PrimaryImage,
                (SELECT COUNT(*) FROM listing_image WHERE ListingID = pl.ListingID) AS ImageCount
         FROM product_listing pl
         INNER JOIN product_model pm ON pl.ModelID = pm.ModelID

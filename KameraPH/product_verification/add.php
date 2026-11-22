@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth('admin'); // Admin login required
 
 $pageTitle = 'Add Product Verification';
 $activeMenu = 'product_verification';
@@ -8,7 +10,8 @@ $message = "";
 $listingID = isset($_GET['listing_id']) ? (int)$_GET['listing_id'] : 0;
 $verificationType = "Physical Authenticity & Serial Check";
 $verificationStatus = "Pending";
-$adminID = "1";
+$curr = current_user();
+$adminID = $curr ? ($curr['AdminID'] ?? "1") : "1";
 $remarks = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -37,8 +40,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt->execute()) {
             $stmt->close();
-            flash('success', "Verification record saved successfully!");
-            redirect("product_verification/index.php?listing_id={$listingID}");
+
+            // Automatically synchronize listing status
+            if ($verificationStatus === 'Verified') {
+                $upd = $conn->prepare("UPDATE product_listing SET Status = 'Live' WHERE ListingID = ? AND Status IN ('Pending Verification', 'Draft')");
+                if ($upd) {
+                    $upd->bind_param("i", $listingID);
+                    $upd->execute();
+                    $upd->close();
+                }
+            } elseif ($verificationStatus === 'Rejected') {
+                $upd = $conn->prepare("UPDATE product_listing SET Status = 'Rejected', SuspensionReason = ? WHERE ListingID = ?");
+                if ($upd) {
+                    $upd->bind_param("si", $remarksVal, $listingID);
+                    $upd->execute();
+                    $upd->close();
+                }
+            }
+
+            flash('success', "Verification inspection saved successfully!");
+            redirect("product_listing/view.php?id={$listingID}");
         } else {
             $message = "Error adding verification: " . $stmt->error;
             $stmt->close();
@@ -56,7 +77,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Verifications</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Check</li>
             </ol>
@@ -110,6 +131,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="col-sm-6">
                             <label for="VerifiedByAdminID" class="form-label">Admin Inspector ID <span class="text-danger">*</span></label>
                             <input type="number" name="VerifiedByAdminID" id="VerifiedByAdminID" class="form-control" min="1" value="<?php echo sanitize($adminID); ?>" required>
+                            <div class="form-text">Staff reviewer ID (defaults to 1).</div>
                         </div>
                     </div>
 
@@ -119,7 +141,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center pt-2">
-                        <a href="index.php<?php echo ($listingID > 0) ? '?listing_id=' . $listingID : ''; ?>" class="btn btn-outline-secondary">
+                        <a href="<?php echo ($listingID > 0) ? base_url('product_listing/view.php?id=' . $listingID) : 'index.php'; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-1"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-primary px-4 shadow-sm">

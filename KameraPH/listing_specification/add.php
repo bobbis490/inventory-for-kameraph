@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Admin or Seller
 
 $pageTitle = 'Add Listing Specification';
 $activeMenu = 'listing_specification';
@@ -37,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if ($stmt->execute()) {
                 $stmt->close();
                 flash('success', "Specification added successfully!");
-                redirect("listing_specification/index.php?listing_id={$listingID}");
+                redirect("product_listing/view.php?id={$listingID}");
             } else {
                 $message = "Error adding specification: " . $stmt->error;
                 $stmt->close();
@@ -47,11 +49,20 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+
+$listingCatID = 0;
+if ($listingID > 0) {
+    $catQ = $conn->query("SELECT pm.CategoryID FROM product_listing pl INNER JOIN product_model pm ON pl.ModelID = pm.ModelID WHERE pl.ListingID = {$listingID}");
+    if ($catQ && $crow = $catQ->fetch_assoc()) {
+        $listingCatID = (int)$crow['CategoryID'];
+    }
+}
+
 $specifications = $conn->query("
-    SELECT sd.SpecDefID, sd.SpecName, sd.DataType, sd.Unit, c.CategoryName
+    SELECT sd.SpecDefID, sd.SpecName, sd.DataType, sd.Unit, sd.CategoryID, c.CategoryName
     FROM spec_definition sd
     LEFT JOIN category c ON sd.CategoryID = c.CategoryID
-    ORDER BY c.CategoryName ASC, sd.SpecName ASC
+    ORDER BY (sd.CategoryID = {$listingCatID}) DESC, c.CategoryName ASC, sd.SpecName ASC
 ");
 
 require_once __DIR__ . '/../includes/header.php';
@@ -61,7 +72,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Specifications</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Spec</li>
             </ol>
@@ -116,7 +127,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center pt-2">
-                        <a href="index.php<?php echo ($listingID > 0) ? '?listing_id=' . $listingID : ''; ?>" class="btn btn-outline-secondary">
+                        <a href="<?php echo ($listingID > 0) ? base_url('product_listing/view.php?id=' . $listingID) : 'index.php'; ?>" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-1"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-primary px-4 shadow-sm">

@@ -10,13 +10,15 @@ if ($id <= 0) {
     redirect('product_listing/index.php');
 }
 
-// Fetch listing with Model, Brand, Category
+// Fetch listing with Model, Brand, Category, and Seller Store
 $stmt = $conn->prepare("
-    SELECT pl.*, pm.ModelName, pm.ReleaseYear, b.BrandName, c.CategoryName
+    SELECT pl.*, pm.ModelName, pm.ReleaseYear, b.BrandName, c.CategoryName,
+           sp.StoreName, sp.VerificationStatus AS SellerVerificationStatus
     FROM product_listing pl
     INNER JOIN product_model pm ON pl.ModelID = pm.ModelID
     INNER JOIN brand b ON pm.BrandID = b.BrandID
     INNER JOIN category c ON pm.CategoryID = c.CategoryID
+    LEFT JOIN seller_profile sp ON pl.SellerID = sp.SellerID
     WHERE pl.ListingID = ?
 ");
 $stmt->bind_param("i", $id);
@@ -47,6 +49,26 @@ $verifications = $conn->query("SELECT * FROM product_verification WHERE ListingI
 // Fetch Reservations
 $reservations = $conn->query("SELECT * FROM listing_reservation WHERE ListingID = {$id} ORDER BY ReservationID DESC");
 
+// Fetch Model Reviews
+$reviews = $conn->query("
+    SELECT pr.* 
+    FROM product_review pr 
+    WHERE pr.ModelID = " . (int)$listing['ModelID'] . " 
+    ORDER BY pr.ReviewID DESC
+");
+
+// Check if verified
+$isVerifiedAuthentic = false;
+if ($verifications && $verifications->num_rows > 0) {
+    while ($vr = $verifications->fetch_assoc()) {
+        if ($vr['VerificationStatus'] === 'Verified') {
+            $isVerifiedAuthentic = true;
+            break;
+        }
+    }
+    $verifications->data_seek(0); // reset pointer
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -54,7 +76,8 @@ require_once __DIR__ . '/../includes/header.php';
     <div>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-1">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>"><i class="bi bi-shop me-1"></i>Marketplace</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Listings</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Listing #<?php echo $id; ?></li>
             </ol>
@@ -74,11 +97,17 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
     <div class="mt-3 mt-md-0 d-flex gap-2">
-        <a href="edit.php?id=<?php echo $id; ?>" class="btn btn-primary shadow-sm">
-            <i class="bi bi-pencil me-1"></i> Edit Listing
-        </a>
-        <a href="index.php" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i> Back to Listings
+        <?php 
+        $cu = current_user();
+        $isOwnerOrAdmin = is_admin() || ($cu && !empty($cu['SellerID']) && (int)$cu['SellerID'] === (int)$listing['SellerID']);
+        if ($isOwnerOrAdmin): 
+        ?>
+            <a href="edit.php?id=<?php echo $id; ?>" class="btn btn-primary shadow-sm">
+                <i class="bi bi-pencil me-1"></i> Edit Listing
+            </a>
+        <?php endif; ?>
+        <a href="<?php echo base_url(); ?>" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Marketplace
         </a>
     </div>
 </div>
@@ -100,9 +129,16 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card card-kamera mb-4">
             <div class="card-header card-header-kamera d-flex justify-content-between align-items-center">
                 <span class="fw-bold text-dark"><i class="bi bi-images me-2 text-warning"></i>Product Gallery</span>
-                <a href="<?php echo base_url('listing_image/add.php?listing_id=' . $id); ?>" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-plus-circle me-1"></i> Add Photo
-                </a>
+                <?php if ($isOwnerOrAdmin): ?>
+                    <div class="d-flex gap-2">
+                        <a href="<?php echo base_url('listing_image/index.php?listing_id=' . $id); ?>" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-images me-1"></i> Manage Photos
+                        </a>
+                        <a href="<?php echo base_url('listing_image/add.php?listing_id=' . $id); ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-plus-circle me-1"></i> Add Photo
+                        </a>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card-body">
                 <?php
@@ -156,9 +192,11 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="card card-kamera">
             <div class="card-header card-header-kamera d-flex justify-content-between align-items-center">
                 <span class="fw-bold text-dark"><i class="bi bi-cpu me-2 text-danger"></i>Technical Specifications</span>
-                <a href="<?php echo base_url('listing_specification/add.php?listing_id=' . $id); ?>" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-plus-circle me-1"></i> Add Spec
-                </a>
+                <?php if ($isOwnerOrAdmin): ?>
+                    <a href="<?php echo base_url('listing_specification/add.php?listing_id=' . $id); ?>" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-circle me-1"></i> Add Spec
+                    </a>
+                <?php endif; ?>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover table-kamera mb-0">
@@ -166,7 +204,9 @@ require_once __DIR__ . '/../includes/header.php';
                         <tr>
                             <th>Specification</th>
                             <th>Value</th>
-                            <th class="text-end" style="width: 100px;">Action</th>
+                            <?php if ($isOwnerOrAdmin): ?>
+                                <th class="text-end" style="width: 100px;">Action</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -180,9 +220,11 @@ require_once __DIR__ . '/../includes/header.php';
                                             <span class="text-muted small"><?php echo sanitize($s['Unit']); ?></span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-end">
-                                        <a href="<?php echo base_url('listing_specification/edit.php?id=' . $s['ListingSpecID']); ?>" class="btn btn-sm btn-link p-0 text-primary">Edit</a>
-                                    </td>
+                                    <?php if ($isOwnerOrAdmin): ?>
+                                        <td class="text-end">
+                                            <a href="<?php echo base_url('listing_specification/edit.php?id=' . $s['ListingSpecID']); ?>" class="btn btn-sm btn-link p-0 text-primary">Edit</a>
+                                        </td>
+                                    <?php endif; ?>
                                 </tr>
                             <?php endwhile; ?>
                         <?php else: ?>
@@ -194,6 +236,41 @@ require_once __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Model Community Reviews -->
+        <div class="card card-kamera mt-4">
+            <div class="card-header card-header-kamera d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark">
+                    <i class="bi bi-star-fill me-2 text-warning"></i>Model Reviews & Feedback
+                </span>
+                <a href="<?php echo base_url('product_review/add.php?model_id=' . (int)$listing['ModelID']); ?>" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Add Review
+                </a>
+            </div>
+            <div class="card-body">
+                <?php if ($reviews && $reviews->num_rows > 0): ?>
+                    <div class="list-group list-group-flush">
+                        <?php while ($rev = $reviews->fetch_assoc()): ?>
+                            <div class="list-group-item px-0 py-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <div>
+                                        <?php echo render_stars($rev['RatingValue']); ?>
+                                        <span class="small fw-semibold text-dark ms-2">Buyer #<?php echo $rev['ReviewerUserID']; ?></span>
+                                    </div>
+                                    <small class="text-muted"><?php echo !empty($rev['CreatedAt']) ? date('M d, Y', strtotime($rev['CreatedAt'])) : ''; ?></small>
+                                </div>
+                                <p class="small text-secondary mb-0"><?php echo nl2br(sanitize($rev['ReviewText'])); ?></p>
+                            </div>
+                        <?php endwhile; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="text-muted small py-2">
+                        <i class="bi bi-chat-left-dots me-1"></i> No reviews recorded yet for <?php echo sanitize($listing['BrandName'] . ' ' . $listing['ModelName']); ?>.
+                        <a href="<?php echo base_url('product_review/add.php?model_id=' . (int)$listing['ModelID']); ?>" class="ms-1">Be the first to leave a review</a>.
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -223,9 +300,36 @@ require_once __DIR__ . '/../includes/header.php';
                         <strong class="fs-5 text-dark"><?php echo $listing['Quantity']; ?> units</strong>
                     </div>
                     <div class="col-6">
-                        <span class="text-muted small d-block">Seller ID</span>
-                        <strong class="fs-5 text-dark">#<?php echo $listing['SellerID']; ?></strong>
+                        <span class="text-muted small d-block">Sold By</span>
+                        <strong class="fs-6 text-dark d-flex align-items-center mt-1">
+                            <i class="bi bi-shop text-primary me-1"></i>
+                            <?php echo sanitize($listing['StoreName'] ?? ('Store #' . $listing['SellerID'])); ?>
+                        </strong>
                     </div>
+                </div>
+
+                <!-- Purchase & Reservation Actions -->
+                <div class="mt-3 pt-3 border-top">
+                    <?php if ($isVerifiedAuthentic): ?>
+                        <div class="alert alert-success d-flex align-items-center py-2 px-3 mb-3 small" role="alert">
+                            <i class="bi bi-patch-check-fill text-success fs-5 me-2"></i>
+                            <div><strong>Verified Authentic:</strong> Inspected by staff.</div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($listing['Status'] === 'Live' && (int)$listing['Quantity'] > 0): ?>
+                        <a href="<?php echo base_url('listing_reservation/add.php?listing_id=' . $id); ?>" class="btn btn-warning w-100 fw-bold py-2 mb-2 shadow-sm d-flex align-items-center justify-content-center">
+                            <i class="bi bi-clock-history me-2"></i> Place Reservation Hold
+                        </a>
+                    <?php elseif ($listing['Status'] === 'Reserved' || (int)$listing['Quantity'] <= 0): ?>
+                        <button class="btn btn-secondary w-100 py-2 mb-2" disabled>
+                            <i class="bi bi-lock me-1"></i> Currently Reserved / Out of Stock
+                        </button>
+                    <?php else: ?>
+                        <div class="alert alert-warning py-2 px-3 small mb-2">
+                            <i class="bi bi-info-circle me-1"></i> Listing status is <strong><?php echo sanitize($listing['Status']); ?></strong>. Not currently active for checkout.
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Shipping dimensions -->

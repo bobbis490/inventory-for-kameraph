@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth('admin'); // Admin login required
 
 $pageTitle = 'Edit Product Verification';
 $activeMenu = 'product_verification';
@@ -64,8 +66,26 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt->execute()) {
             $stmt->close();
+
+            // Automatically synchronize listing status
+            if ($newStatus === 'Verified') {
+                $upd = $conn->prepare("UPDATE product_listing SET Status = 'Live' WHERE ListingID = ? AND Status IN ('Pending Verification', 'Draft')");
+                if ($upd) {
+                    $upd->bind_param("i", $listingID);
+                    $upd->execute();
+                    $upd->close();
+                }
+            } elseif ($newStatus === 'Rejected') {
+                $upd = $conn->prepare("UPDATE product_listing SET Status = 'Rejected', SuspensionReason = ? WHERE ListingID = ?");
+                if ($upd) {
+                    $upd->bind_param("si", $remarksVal, $listingID);
+                    $upd->execute();
+                    $upd->close();
+                }
+            }
+
             flash('success', "Verification record #{$id} updated successfully!");
-            redirect("product_verification/index.php?listing_id={$listingID}");
+            redirect("product_listing/view.php?id={$listingID}");
         } else {
             $message = "Error updating verification: " . $stmt->error;
             $stmt->close();
@@ -90,7 +110,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Verifications</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Edit #<?php echo $id; ?></li>
             </ol>

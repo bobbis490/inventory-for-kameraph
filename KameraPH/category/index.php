@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth('admin'); // Admin login required
 
 $pageTitle = 'Category Management';
 $activeMenu = 'category';
@@ -31,7 +33,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
     <div>
-        <h2 class="h3 fw-bold  mb-0">
+        <h2 class="h3 fw-bold mb-0">
             <i class="bi bi-folder text-success me-2"></i>Category Management
         </h2>
     </div>

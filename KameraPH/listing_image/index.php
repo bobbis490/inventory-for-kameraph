@@ -1,15 +1,22 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Admin or Seller
 
 $pageTitle = 'Listing Images';
 $activeMenu = 'listing_image';
 
 $listingFilter = isset($_GET['listing_id']) ? (int)$_GET['listing_id'] : 0;
 
-$whereSql = "";
+$currUser = current_user();
+$whereConditions = [];
 if ($listingFilter > 0) {
-    $whereSql = "WHERE li.ListingID = {$listingFilter}";
+    $whereConditions[] = "li.ListingID = {$listingFilter}";
 }
+if (!is_admin() && !empty($currUser['SellerID'])) {
+    $whereConditions[] = "pl.SellerID = " . (int)$currUser['SellerID'];
+}
+$whereSql = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
 
 $sql = "SELECT li.*, pl.Title, pl.Price
         FROM listing_image li

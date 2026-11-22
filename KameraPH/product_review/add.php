@@ -1,13 +1,16 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Requires login (admin, seller, or customer)
 
 $pageTitle = 'Add Product Review';
 $activeMenu = 'product_review';
 
 $message = "";
-$orderItemID = "";
+$orderItemID = rand(1001, 9999);
 $modelID = isset($_GET['model_id']) ? (int)$_GET['model_id'] : 0;
-$reviewerUserID = "1";
+$_curr = current_user();
+$reviewerUserID = $_curr['UserID'] ?? 1;
 $ratingValue = 5;
 $reviewText = "";
 
@@ -60,7 +63,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Reviews</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Add Review</li>
             </ol>
@@ -85,10 +88,12 @@ require_once __DIR__ . '/../includes/header.php';
                         <div class="col-sm-6">
                             <label for="OrderItemID" class="form-label">Order Item ID <span class="text-danger">*</span></label>
                             <input type="number" name="OrderItemID" id="OrderItemID" class="form-control" min="1" placeholder="e.g. 1001" value="<?php echo sanitize($orderItemID); ?>" required>
+                            <div class="form-text">Purchase reference number.</div>
                         </div>
                         <div class="col-sm-6">
                             <label for="ReviewerUserID" class="form-label">Reviewer User ID <span class="text-danger">*</span></label>
                             <input type="number" name="ReviewerUserID" id="ReviewerUserID" class="form-control" min="1" value="<?php echo sanitize($reviewerUserID); ?>" required>
+                            <div class="form-text">User account ID (defaults to 1).</div>
                         </div>
                     </div>
 

@@ -15,11 +15,17 @@ $pageTitle = isset($pageTitle) ? $pageTitle . ' - KameraPH' : 'KameraPH - Camera
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
     <!-- KameraPH Custom CSS -->
-    <link rel="stylesheet" href="<?php echo asset_url('css/style.css'); ?>">
+    <link rel="stylesheet" href="<?php echo asset_url('css/style.css') . '?v=' . @filemtime(__DIR__ . '/../assets/css/style.css'); ?>">
 </head>
 <body>
 
-<?php require_once __DIR__ . '/navbar.php'; ?>
+<?php 
+if (!empty($publicPage)) {
+    require_once __DIR__ . '/home_nav.php';
+} else {
+    require_once __DIR__ . '/navbar.php';
+}
+?>
 
 <main class="container py-4">
     <?php echo render_flash(); ?>

@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Admin or Seller
 
 $pageTitle = 'Edit Listing Specification';
 $activeMenu = 'listing_specification';
@@ -44,7 +46,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($stmt->execute()) {
             $stmt->close();
             flash('success', "Specification updated successfully!");
-            redirect("listing_specification/index.php?listing_id={$listingID}");
+            redirect("product_listing/view.php?id={$listingID}");
         } else {
             $message = "Error updating specification: " . $stmt->error;
             $stmt->close();
@@ -71,7 +73,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-8 col-lg-6">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Specifications</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Edit Spec #<?php echo $id; ?></li>
             </ol>

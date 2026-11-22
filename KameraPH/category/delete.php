@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth('admin'); // Admin login required
 
 if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['CategoryID'])) {
     $id = (int)$_POST['CategoryID'];

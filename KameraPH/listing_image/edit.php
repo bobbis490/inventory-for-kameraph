@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_auth(); // Admin or Seller
 
 $pageTitle = 'Edit Listing Image';
 $activeMenu = 'listing_image';
@@ -19,6 +21,19 @@ $stmt->close();
 if (!$image) {
     flash('danger', 'Listing image not found.');
     redirect('listing_image/index.php');
+}
+
+$currUser = current_user();
+if (!is_admin() && !empty($currUser['SellerID'])) {
+    $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+    $chkOwner->bind_param("i", $image['ListingID']);
+    $chkOwner->execute();
+    $lRow = $chkOwner->get_result()->fetch_assoc();
+    $chkOwner->close();
+    if (!$lRow || (int)$lRow['SellerID'] !== (int)$currUser['SellerID']) {
+        flash('danger', 'Access denied: You do not own this listing photo.');
+        redirect('product_listing/index.php');
+    }
 }
 
 $message = "";
@@ -120,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
                 $conn->commit();
                 flash('success', "Image updated successfully!");
-                redirect("listing_image/index.php?listing_id={$listingID}");
+                redirect("product_listing/view.php?id={$listingID}");
             } catch (Exception $e) {
                 $conn->rollback();
                 $message = "Error updating image: " . $e->getMessage();
@@ -143,7 +158,7 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="col-md-9 col-lg-7">
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
+                <li class="breadcrumb-item"><a href="<?php echo base_url('dashboard.php'); ?>">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="index.php">Listing Images</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Edit Photo #<?php echo $id; ?></li>
             </ol>

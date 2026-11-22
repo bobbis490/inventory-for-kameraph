@@ -36,7 +36,7 @@ if (!function_exists('image_url')) {
     function image_url($imagePath) {
         $imagePath = trim((string)$imagePath);
         if ($imagePath === '') {
-            return 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22200%22%20height%3D%22200%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%221.5%22%3E%3Cpath%20d%3D%22M23%2019a2%202%200%200%201-2%202H3a2%202%200%200%201-2-2V8a2%202%200%200%201%202-2h4l2-3h6l2%203h4a2%202%200%200%201%202%202z%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2213%22%20r%3D%224%22%2F%3E%3C%2Fsvg%3E';
+            return 'data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%22400%22%20height%3D%22300%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20400%20300%22%3E%3Crect%20width%3D%22400%22%20height%3D%22300%22%20fill%3D%22%23f1f5f9%22%2F%3E%3Cg%20transform%3D%22translate(170%2C%20100)%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M58%2048a4%204%200%200%201-4%204H6a4%204%200%200%201-4-4V20a4%204%200%200%201%204-4h8l5-7h18l5%207h8a4%204%200%200%201%204%204z%22%2F%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2233%22%20r%3D%2211%22%2F%3E%3C%2Fg%3E%3Ctext%20x%3D%22200%22%20y%3D%22185%22%20text-anchor%3D%22middle%22%20fill%3D%22%2394a3b8%22%20font-family%3D%22sans-serif%22%20font-size%3D%2213%22%20font-weight%3D%22600%22%3ENo%20Photo%20Available%3C%2Ftext%3E%3C%2Fsvg%3E';
         }
 
         // If it is already a full web URL (http:// or https://)
@@ -214,5 +214,41 @@ if (!function_exists('redirect')) {
         $url = (preg_match('#^https?://#i', $path)) ? $path : base_url($path);
         header("Location: " . $url);
         exit();
+    }
+}
+
+if (!function_exists('current_user')) {
+    function current_user() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        return $_SESSION['user'] ?? null;
+    }
+}
+
+if (!function_exists('is_logged_in')) {
+    function is_logged_in() {
+        return current_user() !== null;
+    }
+}
+
+if (!function_exists('is_admin')) {
+    function is_admin() {
+        $u = current_user();
+        return $u && (!empty($u['is_admin']) || ($u['role'] ?? '') === 'admin');
+    }
+}
+
+if (!function_exists('require_auth')) {
+    function require_auth($role = null) {
+        if (!is_logged_in()) {
+            flash('warning', 'Please log in with a system account to continue.');
+            $return = $_SERVER['REQUEST_URI'] ?? '';
+            redirect('login.php?redirect=' . urlencode($return));
+        }
+        if ($role === 'admin' && !is_admin()) {
+            flash('danger', 'Access denied. Administrator privileges required.');
+            redirect('index.php');
+        }
     }
 }
