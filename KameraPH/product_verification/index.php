@@ -32,13 +32,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
     <div>
-        <nav aria-label="breadcrumb">
-            <ol class="breadcrumb mb-1">
-                <li class="breadcrumb-item"><a href="<?php echo base_url(); ?>">Home</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Verifications</li>
-            </ol>
-        </nav>
-        <h2 class="h3 fw-bold text-dark mb-0">
+        <h2 class="h3 fw-bold mb-0">
             <i class="bi bi-shield-check text-success me-2"></i>Product Verification Management
         </h2>
     </div>
