@@ -4,9 +4,11 @@ $active = $activeMenu ?? '';
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark navbar-kamera sticky-top">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="<?php echo base_url(); ?>">
-            <i class="bi bi-camera me-2 fs-4 text-white"></i>
-            <span class="text-white fw-bold">KameraPH</span>
+        <a class="navbar-brand d-flex align-items-center gap-2" href="<?php echo base_url(); ?>">
+            <span class="logo-badge d-inline-flex align-items-center justify-content-center bg-white rounded-2 shadow-sm flex-shrink-0" style="width:38px;height:38px;padding:3px;">
+                <img src="<?php echo base_url('assets/logo.php'); ?>" alt="KameraPH Logo" style="height:30px;width:auto;object-fit:contain;">
+            </span>
+            <span class="text-white fw-bold fs-5">KameraPH</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#kameraNav" aria-controls="kameraNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -66,6 +68,21 @@ $active = $activeMenu ?? '';
                                 <i class="bi bi-shop me-2 text-primary"></i> Product Listings
                             </a>
                         </li>
+                        <?php if (is_admin()):
+                            // Live pending count badge
+                            $pendingCount = 0;
+                            $pq = $conn->query("SELECT COUNT(*) FROM product_listing WHERE Status = 'Pending Verification'");
+                            if ($pq) $pendingCount = (int)$pq->fetch_row()[0];
+                        ?>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center justify-content-between" href="<?php echo base_url('product_listing/review_queue.php'); ?>">
+                                <span><i class="bi bi-clipboard2-check me-2 text-warning"></i> Review Queue</span>
+                                <?php if ($pendingCount > 0): ?>
+                                    <span class="badge bg-danger ms-2"><?php echo $pendingCount; ?></span>
+                                <?php endif; ?>
+                            </a>
+                        </li>
+                        <?php endif; ?>
                         <li>
                             <a class="dropdown-item d-flex align-items-center <?php echo ($active === 'listing_image') ? 'active' : ''; ?>" href="<?php echo base_url('listing_image/index.php'); ?>">
                                 <i class="bi bi-images me-2 text-warning"></i> Listing Images
@@ -78,6 +95,48 @@ $active = $activeMenu ?? '';
                         </li>
                     </ul>
                 </li>
+
+                <!-- Warehouse Inventory Dropdown (Admin Only) -->
+                <?php if (is_admin()): ?>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle <?php echo ($active === 'warehouse') ? 'active' : ''; ?>" href="#" id="warehouseDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-buildings me-1"></i> Warehouse
+                    </a>
+                    <ul class="dropdown-menu shadow" aria-labelledby="warehouseDropdown">
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/index.php'); ?>">
+                                <i class="bi bi-speedometer2 me-2 text-primary"></i> Warehouse Hub
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/inventory.php'); ?>">
+                                <i class="bi bi-grid-3x3-gap me-2 text-success"></i> Stock & Bins
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/movement.php'); ?>">
+                                <i class="bi bi-arrow-down-up me-2 text-warning"></i> Movements & Logs
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/transfer.php'); ?>">
+                                <i class="bi bi-arrow-left-right me-2 text-info"></i> Inter-Hub Transfer
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/audit.php'); ?>">
+                                <i class="bi bi-clipboard-check me-2 text-secondary"></i> Cycle Audit
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center" href="<?php echo base_url('warehouse/warehouses.php'); ?>">
+                                <i class="bi bi-building me-2 text-dark"></i> Facilities Directory
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <?php endif; ?>
 
                 <!-- Operations Dropdown -->
                 <li class="nav-item dropdown">
@@ -105,6 +164,11 @@ $active = $activeMenu ?? '';
             </ul>
 
             <div class="d-flex align-items-center gap-2">
+                <!-- Theme Toggle -->
+                <button id="themeToggleBtn" class="btn btn-sm btn-outline-light rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" type="button" title="Toggle Light/Night Mode" style="width:36px;height:36px;">
+                    <i class="bi bi-sun-fill" id="themeIcon"></i>
+                </button>
+
                 <a href="<?php echo base_url('product_listing/add.php'); ?>" class="btn-nav-new-listing text-decoration-none">
                     <i class="bi bi-plus-circle me-1"></i> New Listing
                 </a>

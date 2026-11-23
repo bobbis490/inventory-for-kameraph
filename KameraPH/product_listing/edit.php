@@ -47,8 +47,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $widthCm = (float)($_POST['WidthCm'] ?? 0);
     $heightCm = (float)($_POST['HeightCm'] ?? 0);
     $insuredInput = trim($_POST['InsuredValue'] ?? '');
-    $status = $_POST['Status'] ?? 'Draft';
-    $suspensionReason = trim($_POST['SuspensionReason'] ?? '');
+
+    // Admin can set any status; non-admins are always reset to Pending Verification
+    if (is_admin()) {
+        $status = $_POST['Status'] ?? 'Draft';
+        $suspensionReason = trim($_POST['SuspensionReason'] ?? '');
+    } else {
+        $status = 'Pending Verification';
+        $suspensionReason = '';
+    }
 
     $price = ($priceInput !== '') ? (float)$priceInput : 0.0;
     $origPrice = ($origPriceInput !== '') ? (float)$origPriceInput : null;
@@ -98,7 +105,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($stmt->execute()) {
             $stmt->close();
-            flash('success', "Listing #{$id} updated successfully!");
+            flash('success', is_admin()
+                ? "Listing #{$id} updated successfully!"
+                : "Your listing has been updated and resubmitted for admin review. It will be live once approved."
+            );
             redirect("product_listing/view.php?id={$id}");
         } else {
             $message = "Error updating listing: " . $stmt->error;

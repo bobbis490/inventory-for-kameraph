@@ -141,7 +141,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
                             <td>
-                                <a href="view.php?id=<?php echo $row['ListingID']; ?>" class="position-relative d-inline-block">
+                                <a href="view.php?id=<?php echo $row['ListingID']; ?>" class="position-relative d-inline-block" onclick="sendToForYou('CLICK', <?php echo (int)$row['ListingID']; ?>);">
                                     <img src="<?php echo image_url($row['PrimaryImage'] ?? ''); ?>" alt="Photo" class="listing-thumb">
                                     <?php if ($row['ImageCount'] > 1): ?>
                                         <span class="position-absolute bottom-0 end-0 badge bg-dark opacity-75" style="font-size:0.65rem;">
@@ -151,7 +151,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 </a>
                             </td>
                             <td>
-                                <a href="view.php?id=<?php echo $row['ListingID']; ?>" class="fw-bold text-dark text-decoration-none d-block">
+                                <a href="view.php?id=<?php echo $row['ListingID']; ?>" class="fw-bold text-dark text-decoration-none d-block" onclick="sendToForYou('CLICK', <?php echo (int)$row['ListingID']; ?>);">
                                     <?php echo sanitize($row['Title']); ?>
                                 </a>
                                 <small class="text-muted">Listing #<?php echo $row['ListingID']; ?> &bull; Seller ID: #<?php echo $row['SellerID']; ?></small>

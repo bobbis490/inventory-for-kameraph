@@ -20,6 +20,9 @@ If rewrites are off, use `http://localhost/KameraPH/api/index.php/brand/1` inste
 | `listing_reservation` | ReservationID | `ExpiresAt` must be after `ReservedAt`; defaults to now / +24h |
 | `product_verification` | VerificationID | `VerifiedAt` is set by the server |
 | `product_review` | ReviewID | rating 1–5; `CreatedAt` set by the server |
+| `warehouse` | WarehouseID | storage capacity, contacts, and status |
+| `warehouse_inventory` | InventoryID | stock on hand, reserved, available, and aisle-rack-shelf-bin |
+| `stock_movement` | MovementID | Stock In, Stock Out, Transfer, Adjustment audit trail |
 
 `GET /api/` lists every resource with its writable fields.
 

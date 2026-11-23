@@ -220,7 +220,7 @@ require __DIR__ . '/includes/header.php';
 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-5">
     <?php foreach ($listings as $r): ?>
     <div class="col">
-        <a href="<?php echo base_url('product_listing/view.php?id=' . (int)$r['ListingID']); ?>" class="kp-card text-decoration-none d-block h-100 position-relative">
+        <a href="<?php echo base_url('product_listing/view.php?id=' . (int)$r['ListingID']); ?>" class="kp-card text-decoration-none d-block h-100 position-relative" data-listing-id="<?php echo (int)$r['ListingID']; ?>" onclick="sendToForYou('CLICK', <?php echo (int)$r['ListingID']; ?>);">
             <div class="kp-card-img position-relative">
                 <img src="<?php echo sanitize(image_url($r['PrimaryImage'] ?? '')); ?>" alt="<?php echo sanitize($r['Title']); ?>" loading="lazy" onerror="this.onerror=null; this.src='<?php echo sanitize(image_url('')); ?>';">
                 <?php if (!empty($r['IsVerified']) && (int)$r['IsVerified'] > 0): ?>
@@ -287,4 +287,23 @@ if (!$filtering) {
     <?php endif; ?>
 </div>
 <?php endif; ?>
+<!-- Module 4: SEARCH event on form submit -->
+<script>
+(function () {
+    var form = document.querySelector('form.kp-search');
+    if (form) {
+        form.addEventListener('submit', function () {
+            var q = (form.querySelector('[name="q"]') || {}).value;
+            if (q && q.trim()) {
+                sendToForYou('SEARCH', null, q.trim());
+            }
+        });
+    }
+    <?php if ($q !== ''): ?>
+    // Also fire SEARCH for server-side filter submits (e.g. category/brand dropdowns with existing query)
+    // No duplicate: a fresh search submission already fired above on that page load.
+    <?php endif; ?>
+})();
+</script>
+
 <?php require __DIR__ . '/includes/footer.php'; ?>

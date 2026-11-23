@@ -323,4 +323,78 @@ return [
             }
         },
     ],
+
+    // --------------------------------------------------------------- warehouse
+    'warehouse' => [
+        'table'  => 'warehouse',
+        'pk'     => 'WarehouseID',
+        'search' => ['t.WarehouseCode', 't.WarehouseName', 't.City'],
+        'fields' => [
+            'WarehouseCode'   => ['type' => 'string', 'required' => true, 'max' => 50],
+            'WarehouseName'   => ['type' => 'string', 'required' => true, 'max' => 150],
+            'Address'         => ['type' => 'string', 'required' => true, 'max' => 255],
+            'City'            => ['type' => 'string', 'required' => true, 'max' => 100],
+            'Province'        => ['type' => 'string', 'null' => true, 'max' => 100],
+            'PostalCode'      => ['type' => 'string', 'null' => true, 'max' => 20],
+            'ContactPerson'   => ['type' => 'string', 'null' => true, 'max' => 100],
+            'ContactPhone'    => ['type' => 'string', 'null' => true, 'max' => 50],
+            'ContactEmail'    => ['type' => 'string', 'null' => true, 'max' => 100],
+            'StorageCapacity' => ['type' => 'int', 'min' => 1, 'default' => 5000],
+            'Status'          => ['type' => 'enum', 'values' => ['Active', 'Inactive', 'Under Maintenance'], 'default' => 'Active'],
+            'Notes'           => ['type' => 'string', 'null' => true, 'max' => 65535],
+        ],
+    ],
+
+    // ----------------------------------------------------- warehouse_inventory
+    'warehouse_inventory' => [
+        'table'  => 'warehouse_inventory',
+        'pk'     => 'InventoryID',
+        'select' => 'w.WarehouseCode, w.WarehouseName, pl.Title AS ListingTitle, pl.Price',
+        'joins'  => 'LEFT JOIN warehouse w ON t.WarehouseID = w.WarehouseID LEFT JOIN product_listing pl ON t.ListingID = pl.ListingID',
+        'search' => ['t.BatchNumber', 'w.WarehouseName', 'pl.Title'],
+        'fields' => [
+            'WarehouseID'       => ['type' => 'int', 'required' => true, 'min' => 1, 'ref' => ['warehouse', 'WarehouseID']],
+            'ListingID'         => ['type' => 'int', 'required' => true, 'min' => 1, 'ref' => ['product_listing', 'ListingID']],
+            'QuantityOnHand'    => ['type' => 'int', 'min' => 0, 'default' => 0],
+            'QuantityReserved'  => ['type' => 'int', 'min' => 0, 'default' => 0],
+            'QuantityAvailable' => ['type' => 'int', 'min' => 0, 'default' => 0],
+            'ReorderLevel'      => ['type' => 'int', 'min' => 0, 'default' => 5],
+            'ReorderQuantity'   => ['type' => 'int', 'min' => 1, 'default' => 15],
+            'Aisle'             => ['type' => 'string', 'max' => 30, 'default' => 'A1'],
+            'Rack'              => ['type' => 'string', 'max' => 30, 'default' => 'R1'],
+            'Shelf'             => ['type' => 'string', 'max' => 30, 'default' => 'S1'],
+            'Bin'               => ['type' => 'string', 'max' => 30, 'default' => 'B1'],
+            'BatchNumber'       => ['type' => 'string', 'null' => true, 'max' => 60],
+            'ConditionNotes'    => ['type' => 'string', 'null' => true, 'max' => 255],
+        ],
+    ],
+
+    // ---------------------------------------------------------- stock_movement
+    'stock_movement' => [
+        'table'  => 'stock_movement',
+        'pk'     => 'MovementID',
+        'select' => 'pl.Title AS ListingTitle, w_from.WarehouseCode AS FromCode, w_to.WarehouseCode AS ToCode',
+        'joins'  => 'LEFT JOIN product_listing pl ON t.ListingID = pl.ListingID '
+                  . 'LEFT JOIN warehouse w_from ON t.FromWarehouseID = w_from.WarehouseID '
+                  . 'LEFT JOIN warehouse w_to ON t.ToWarehouseID = w_to.WarehouseID',
+        'search' => ['t.ReferenceNumber', 't.Reason', 't.Notes', 'pl.Title'],
+        'fields' => [
+            'MovementType'    => ['type' => 'enum', 'values' => ['Stock In', 'Stock Out', 'Transfer', 'Adjustment', 'Reservation Lock', 'Reservation Release', 'Damage/Loss', 'Return'], 'default' => 'Stock In'],
+            'ReferenceNumber' => ['type' => 'string', 'required' => true, 'max' => 100],
+            'ListingID'       => ['type' => 'int', 'required' => true, 'min' => 1, 'ref' => ['product_listing', 'ListingID']],
+            'FromWarehouseID' => ['type' => 'int', 'null' => true, 'ref' => ['warehouse', 'WarehouseID']],
+            'ToWarehouseID'   => ['type' => 'int', 'null' => true, 'ref' => ['warehouse', 'WarehouseID']],
+            'Quantity'        => ['type' => 'int', 'required' => true, 'min' => 1],
+            'UnitCost'        => ['type' => 'float', 'null' => true, 'min' => 0],
+            'Reason'          => ['type' => 'string', 'null' => true, 'max' => 255],
+            'Notes'           => ['type' => 'string', 'null' => true, 'max' => 65535],
+            'PerformedBy'     => ['type' => 'string', 'default' => 'Admin', 'max' => 100],
+            'CreatedAt'       => ['type' => 'datetime', 'readonly' => true],
+        ],
+        'before_save' => function (array &$changes, array $m, ?array $old): void {
+            if ($old === null) {
+                $changes['CreatedAt'] = date('Y-m-d H:i:s');
+            }
+        },
+    ],
 ];

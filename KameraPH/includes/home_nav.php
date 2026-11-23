@@ -3,12 +3,19 @@ $currentUser = current_user();
 ?>
 <nav class="navbar navbar-expand-lg navbar-dark navbar-kamera sticky-top">
     <div class="container">
-        <a class="navbar-brand d-flex align-items-center" href="<?php echo base_url(); ?>">
-            <i class="bi bi-camera me-2 fs-4 text-white"></i>
-            <span class="text-white fw-bold">KameraPH</span>
-            <span class="badge bg-warning text-dark ms-2 small d-none d-sm-inline-block" style="font-size: 0.72rem; letter-spacing: 0.5px;">MARKETPLACE</span>
+        <a class="navbar-brand d-flex align-items-center gap-2" href="<?php echo base_url(); ?>">
+            <span class="logo-badge d-inline-flex align-items-center justify-content-center bg-white rounded-2 shadow-sm flex-shrink-0" style="width:38px;height:38px;padding:3px;">
+                <img src="<?php echo base_url('assets/logo.php'); ?>" alt="KameraPH Logo" style="height:30px;width:auto;object-fit:contain;">
+            </span>
+            <span class="text-white fw-bold fs-5">KameraPH</span>
+            <span class="badge bg-warning text-dark ms-1 small d-none d-sm-inline-block" style="font-size:0.72rem;letter-spacing:0.5px;">MARKETPLACE</span>
         </a>
         <div class="d-flex align-items-center gap-2">
+            <!-- Theme Toggle -->
+            <button id="themeToggleBtn" class="btn btn-sm btn-outline-light rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" type="button" title="Toggle Light/Night Mode" style="width:36px;height:36px;">
+                <i class="bi bi-sun-fill" id="themeIcon"></i>
+            </button>
+
             <a href="<?php echo base_url(); ?>" class="btn btn-sm btn-outline-light d-none d-md-inline-flex align-items-center">
                 <i class="bi bi-shop me-1"></i> Browse Gear
             </a>

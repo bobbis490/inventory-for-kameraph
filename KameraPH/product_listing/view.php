@@ -49,6 +49,9 @@ $verifications = $conn->query("SELECT * FROM product_verification WHERE ListingI
 // Fetch Reservations
 $reservations = $conn->query("SELECT * FROM listing_reservation WHERE ListingID = {$id} ORDER BY ReservationID DESC");
 
+// Fetch Warehouse Stock Locations
+$warehouseStocks = get_warehouse_inventory($conn, ['listing_id' => $id]);
+
 // Fetch Model Reviews
 $reviews = $conn->query("
     SELECT pr.* 
@@ -118,6 +121,37 @@ require_once __DIR__ . '/../includes/header.php';
         <div>
             <strong>This listing is currently suspended:</strong>
             <p class="mb-0 mt-1"><?php echo nl2br(sanitize($listing['SuspensionReason'])); ?></p>
+        </div>
+    </div>
+<?php endif; ?>
+
+<?php if ($listing['Status'] === 'Pending Verification'): ?>
+    <div class="alert alert-warning d-flex align-items-start mb-4 shadow-sm" role="alert">
+        <i class="bi bi-hourglass-split fs-5 me-3 mt-1 flex-shrink-0"></i>
+        <div>
+            <strong>Pending Admin Review</strong>
+            <p class="mb-0 mt-1 small">
+                Your listing has been submitted and is waiting for admin approval before it appears
+                on the marketplace.
+                <?php if (is_admin()): ?>
+                    <a href="<?php echo base_url('product_listing/review_queue.php'); ?>" class="fw-semibold ms-1">
+                        <i class="bi bi-clipboard2-check me-1"></i>Go to Review Queue
+                    </a>
+                <?php endif; ?>
+            </p>
+        </div>
+    </div>
+<?php endif; ?>
+
+<?php if ($listing['Status'] === 'Rejected' && !empty($listing['SuspensionReason'])): ?>
+    <div class="alert alert-danger d-flex align-items-start mb-4 shadow-sm" role="alert">
+        <i class="bi bi-x-circle-fill fs-5 me-3 mt-1 flex-shrink-0"></i>
+        <div>
+            <strong>Listing Rejected by Admin</strong>
+            <p class="mb-0 mt-1 small"><?php echo nl2br(sanitize($listing['SuspensionReason'])); ?></p>
+            <a href="edit.php?id=<?php echo $id; ?>" class="btn btn-sm btn-outline-primary mt-2">
+                <i class="bi bi-pencil me-1"></i> Edit &amp; Resubmit
+            </a>
         </div>
     </div>
 <?php endif; ?>
@@ -318,7 +352,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php endif; ?>
 
                     <?php if ($listing['Status'] === 'Live' && (int)$listing['Quantity'] > 0): ?>
-                        <a href="<?php echo base_url('listing_reservation/add.php?listing_id=' . $id); ?>" class="btn btn-warning w-100 fw-bold py-2 mb-2 shadow-sm d-flex align-items-center justify-content-center">
+                        <a href="<?php echo base_url('listing_reservation/add.php?listing_id=' . $id); ?>" class="btn btn-warning w-100 fw-bold py-2 mb-2 shadow-sm d-flex align-items-center justify-content-center" onclick="sendToForYou('CART', <?php echo (int)$id; ?>);">
                             <i class="bi bi-clock-history me-2"></i> Place Reservation Hold
                         </a>
                     <?php elseif ($listing['Status'] === 'Reserved' || (int)$listing['Quantity'] <= 0): ?>
@@ -350,6 +384,60 @@ require_once __DIR__ . '/../includes/header.php';
                 </ul>
             </div>
         </div>
+
+        <!-- Warehouse Physical Stock & Bins Card (Admin Only) -->
+        <?php if (is_admin()): ?>
+        <div class="card card-kamera mb-4 shadow-sm border-start border-primary border-3">
+            <div class="card-header card-header-kamera d-flex justify-content-between align-items-center">
+                <span class="fw-bold text-dark">
+                    <i class="bi bi-buildings-fill me-2 text-primary"></i>Warehouse Stock & Bins
+                </span>
+                <a href="<?php echo base_url('warehouse/movement.php?action=in&listing_id=' . $id); ?>" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-circle me-1"></i> Stock In
+                </a>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($warehouseStocks)): ?>
+                    <?php foreach ($warehouseStocks as $ws): ?>
+                        <div class="border rounded p-3 mb-2 bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="badge bg-secondary mb-1"><?php echo sanitize($ws['WarehouseCode']); ?></span>
+                                    <strong class="d-block text-dark"><?php echo sanitize($ws['WarehouseName']); ?></strong>
+                                    <small class="text-muted"><i class="bi bi-geo-alt me-1"></i><?php echo sanitize($ws['WarehouseCity']); ?></small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-success-subtle text-success fs-6 border border-success-subtle fw-bold">
+                                        <?php echo (int)$ws['QuantityAvailable']; ?> avail
+                                    </span>
+                                    <div class="small text-muted mt-1"><?php echo (int)$ws['QuantityOnHand']; ?> on hand</div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top small">
+                                <div>
+                                    <span class="text-muted">Storage Bin:</span>
+                                    <strong class="font-monospace text-primary"><?php echo sanitize($ws['Aisle'] . '-' . $ws['Rack'] . '-' . $ws['Shelf'] . '-' . $ws['Bin']); ?></strong>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="<?php echo base_url('warehouse/transfer.php?listing_id=' . $id . '&from_wh=' . $ws['WarehouseID']); ?>" class="btn btn-outline-info" title="Transfer Stock">
+                                        <i class="bi bi-arrow-left-right"></i> Transfer
+                                    </a>
+                                    <a href="<?php echo base_url('warehouse/inventory.php?warehouse_id=' . $ws['WarehouseID'] . '&search=' . urlencode($listing['Title'])); ?>" class="btn btn-outline-secondary" title="View in Warehouse">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="text-muted small mb-2">No physical warehouse bin assigned to this listing yet.</p>
+                    <a href="<?php echo base_url('warehouse/movement.php?action=in&listing_id=' . $id); ?>" class="btn btn-sm btn-primary w-100">
+                        <i class="bi bi-box-arrow-in-down me-1"></i> Receive into Warehouse
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- Verification Record Card -->
         <div class="card card-kamera mb-4">
@@ -409,5 +497,12 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+
+<!-- Module 4: VIEW event on page load -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    sendToForYou('VIEW', <?php echo (int)$id; ?>);
+});
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

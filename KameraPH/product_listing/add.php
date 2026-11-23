@@ -41,7 +41,8 @@ $lengthCm = "14.5";
 $widthCm = "12.0";
 $heightCm = "9.5";
 $insuredValue = "";
-$status = "Live"; // Default to Live for immediate catalog visibility
+// Non-admins always start at Pending Verification; admins can choose freely
+$status = is_admin() ? "Live" : "Pending Verification";
 $suspensionReason = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -137,8 +138,15 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $widthCm = (float)($_POST['WidthCm'] ?? 0);
     $heightCm = (float)($_POST['HeightCm'] ?? 0);
     $insuredInput = trim($_POST['InsuredValue'] ?? '');
-    $status = $_POST['Status'] ?? 'Live';
-    $suspensionReason = trim($_POST['SuspensionReason'] ?? '');
+
+    // Admin can set any status; regular users are always locked to Pending Verification
+    if (is_admin()) {
+        $status = $_POST['Status'] ?? 'Pending Verification';
+        $suspensionReason = trim($_POST['SuspensionReason'] ?? '');
+    } else {
+        $status = 'Pending Verification';
+        $suspensionReason = '';
+    }
 
     $price = ($priceInput !== '') ? (float)$priceInput : 0.0;
     $origPrice = ($origPriceInput !== '') ? (float)$origPriceInput : null;
@@ -211,7 +219,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                     }
                 }
 
-                flash('success', "Listing '{$title}' (#{$newID}) was created successfully!");
+                flash('success', is_admin()
+                    ? "Listing '{$title}' (#{$newID}) was created successfully!"
+                    : "Your listing '{$title}' (#{$newID}) has been submitted for admin review. It will appear on the marketplace once approved."
+                );
                 redirect("product_listing/view.php?id={$newID}");
             } else {
                 $message = "Error creating listing: " . $stmt->error;
@@ -474,6 +485,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <!-- Section 5: Status -->
+                    <?php if (is_admin()): ?>
                     <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
                         <i class="bi bi-shield-check me-1 text-warning"></i> 5. Publication Status
                     </h6>
@@ -488,18 +500,32 @@ require_once __DIR__ . '/../includes/header.php';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <?php if (is_admin()): ?>
-                            <div class="col-md-6">
-                                <label for="SuspensionReason" class="form-label fw-semibold">Suspension Reason</label>
-                                <input type="text" name="SuspensionReason" id="SuspensionReason" class="form-control" placeholder="Only applicable if status is Suspended" value="<?php echo sanitize($suspensionReason); ?>">
-                            </div>
-                        <?php endif; ?>
+                        <div class="col-md-6">
+                            <label for="SuspensionReason" class="form-label fw-semibold">Suspension Reason</label>
+                            <input type="text" name="SuspensionReason" id="SuspensionReason" class="form-control" placeholder="Only applicable if status is Suspended" value="<?php echo sanitize($suspensionReason); ?>">
+                        </div>
                     </div>
+                    <?php else: ?>
+                    <!-- Non-admin: locked to Pending Verification -->
+                    <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill fs-5 me-3 mt-1 text-info flex-shrink-0"></i>
+                        <div>
+                            <strong>How it works:</strong> After you submit, your listing goes into
+                            <strong>Pending Verification</strong> status. An admin will review your item and
+                            approve it to go <strong>Live</strong> on the marketplace — usually within 24 hours.
+                            You'll be able to track the status from your listings page.
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
                         <a href="index.php" class="btn btn-secondary">Cancel</a>
                         <button type="submit" class="btn btn-warning fw-bold px-4">
-                            <i class="bi bi-check-lg me-1"></i> Save &amp; Publish Listing
+                            <?php if (is_admin()): ?>
+                                <i class="bi bi-check-lg me-1"></i> Save &amp; Publish Listing
+                            <?php else: ?>
+                                <i class="bi bi-send me-1"></i> Submit for Review
+                            <?php endif; ?>
                         </button>
                     </div>
                 </form>

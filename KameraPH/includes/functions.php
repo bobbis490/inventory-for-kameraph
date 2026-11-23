@@ -252,3 +252,6 @@ if (!function_exists('require_auth')) {
         }
     }
 }
+
+// Load Warehouse Inventory Helper Functions
+require_once __DIR__ . '/warehouse_functions.php';

@@ -75,6 +75,15 @@ $curr = current_user();
 $adminName = $curr['FullName'] ?? ($curr['FirstName'] ?? 'Admin');
 $adminRole = $curr['AdminRole'] ?? 'Administrator';
 
+// Fetch Pending Review Queue count
+$stats['pending_review'] = 0;
+if ($res = $conn->query("SELECT COUNT(*) AS total FROM product_listing WHERE Status = 'Pending Verification'")) {
+    $stats['pending_review'] = (int)($res->fetch_assoc()['total'] ?? 0);
+}
+
+// Fetch Warehouse Inventory Stats
+$whStats = get_warehouse_stats($conn);
+
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -89,6 +98,17 @@ require_once __DIR__ . '/includes/header.php';
         </p>
     </div>
     <div class="d-flex gap-2 mt-3 mt-md-0">
+        <a href="<?php echo base_url('product_listing/review_queue.php'); ?>" class="btn btn-outline-warning text-decoration-none position-relative">
+            <i class="bi bi-clipboard2-check me-1"></i> Review Queue
+            <?php if ($stats['pending_review'] > 0): ?>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.65rem;">
+                    <?php echo $stats['pending_review']; ?>
+                </span>
+            <?php endif; ?>
+        </a>
+        <a href="<?php echo base_url('warehouse/index.php'); ?>" class="btn btn-outline-light text-decoration-none">
+            <i class="bi bi-buildings me-1"></i> Warehouse Hub
+        </a>
         <a href="<?php echo base_url('product_listing/add.php'); ?>" class="btn-add-listing-blue text-decoration-none">
             <i class="bi bi-plus-circle me-1"></i> Add Listing
         </a>
@@ -159,6 +179,89 @@ require_once __DIR__ . '/includes/header.php';
                     <i class="bi bi-star-fill stat-icon-star"></i>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Pending Review Queue stat card -->
+    <div class="col-sm-6 col-lg-3">
+        <a href="<?php echo base_url('product_listing/review_queue.php'); ?>" class="text-decoration-none">
+            <div class="stat-card-white <?php echo $stats['pending_review'] > 0 ? 'stat-card-amber border border-warning' : 'stat-card-cyan'; ?> position-relative">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="stat-card-label">REVIEW QUEUE</div>
+                        <div class="stat-card-number"><?php echo number_format($stats['pending_review']); ?></div>
+                        <div class="stat-card-sub <?php echo $stats['pending_review'] > 0 ? 'text-danger fw-semibold' : 'text-success'; ?>">
+                            <?php echo $stats['pending_review'] > 0 ? 'Needs Approval' : 'All reviewed'; ?>
+                        </div>
+                    </div>
+                    <div class="stat-card-icon-box <?php echo $stats['pending_review'] > 0 ? 'stat-icon-amber' : 'stat-icon-cyan'; ?>">
+                        <i class="bi bi-clipboard2-check"></i>
+                    </div>
+                </div>
+                <?php if ($stats['pending_review'] > 0): ?>
+                    <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-danger" style="font-size:0.75rem;">
+                        <?php echo $stats['pending_review']; ?>
+                    </span>
+                <?php endif; ?>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Review Queue Alert Banner (shown when listings are pending) -->
+<?php if ($stats['pending_review'] > 0): ?>
+<div class="card mb-4 shadow-sm border-start border-danger border-4">
+    <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-3 py-3">
+        <div class="d-flex align-items-center gap-3">
+            <div class="p-3 bg-danger-subtle text-danger rounded-3">
+                <i class="bi bi-clipboard2-check fs-3"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">
+                    <?php echo $stats['pending_review']; ?> Listing<?php echo $stats['pending_review'] !== 1 ? 's' : ''; ?> Awaiting Your Review
+                </h5>
+                <small class="text-muted">Sellers are waiting for approval before their items go live on the marketplace.</small>
+            </div>
+        </div>
+        <a href="<?php echo base_url('product_listing/review_queue.php'); ?>" class="btn btn-danger fw-semibold px-4">
+            <i class="bi bi-clipboard2-check me-1"></i> Open Review Queue
+            <span class="badge bg-white text-danger ms-2"><?php echo $stats['pending_review']; ?></span>
+        </a>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Warehouse Inventory Overview Banner -->
+<div class="card card-kamera mb-4 p-3 shadow-sm border-start border-primary border-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div class="d-flex align-items-center">
+            <div class="p-3 bg-primary-subtle text-primary rounded-3 me-3">
+                <i class="bi bi-buildings-fill fs-3"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">Warehouse Physical Inventory Network</h5>
+                <small class="text-muted">
+                    <strong><?php echo $whStats['total_warehouses']; ?></strong> Facilities &bull;
+                    <strong><?php echo number_format($whStats['total_items_in_stock']); ?></strong> Units Stored &bull;
+                    <strong><?php echo format_price($whStats['stock_valuation']); ?></strong> Stock Valuation
+                </small>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <?php if ($whStats['low_stock_count'] > 0): ?>
+                <a href="<?php echo base_url('warehouse/inventory.php?status=low_stock'); ?>" class="badge bg-warning text-dark text-decoration-none p-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i><?php echo $whStats['low_stock_count']; ?> Low Stock Alert(s)
+                </a>
+            <?php endif; ?>
+            <a href="<?php echo base_url('warehouse/movement.php?action=in'); ?>" class="btn btn-sm btn-primary">
+                <i class="bi bi-box-arrow-in-down me-1"></i>Stock In
+            </a>
+            <a href="<?php echo base_url('warehouse/transfer.php'); ?>" class="btn btn-sm btn-info text-white">
+                <i class="bi bi-arrow-left-right me-1"></i>Transfer
+            </a>
+            <a href="<?php echo base_url('warehouse/index.php'); ?>" class="btn btn-sm btn-outline-dark">
+                Warehouse Hub <i class="bi bi-arrow-right"></i>
+            </a>
         </div>
     </div>
 </div>
@@ -240,6 +343,13 @@ require_once __DIR__ . '/includes/header.php';
                 <i class="bi bi-lightning-charge text-warning me-2 fs-5"></i>Quick Management
             </div>
             <div>
+                <a href="<?php echo base_url('warehouse/index.php'); ?>" class="quick-manage-item">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-buildings text-primary me-2"></i>
+                        <span>Warehouse Inventory</span>
+                    </div>
+                    <span class="quick-manage-badge"><?php echo number_format($whStats['total_items_in_stock']); ?> units</span>
+                </a>
                 <a href="<?php echo base_url('brand/index.php'); ?>" class="quick-manage-item">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-tag text-primary me-2"></i>
