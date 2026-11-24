@@ -17,9 +17,10 @@ $params = [];
 $types = "";
 
 // If seller, scope to their own listings
-if (!is_admin() && !empty($currUser['SellerID'])) {
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
     $where[] = "pl.SellerID = ?";
-    $params[] = (int)$currUser['SellerID'];
+    $params[] = $sellerId;
     $types .= "i";
 }
 

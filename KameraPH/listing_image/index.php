@@ -8,13 +8,13 @@ $activeMenu = 'listing_image';
 
 $listingFilter = isset($_GET['listing_id']) ? (int)$_GET['listing_id'] : 0;
 
-$currUser = current_user();
 $whereConditions = [];
 if ($listingFilter > 0) {
     $whereConditions[] = "li.ListingID = {$listingFilter}";
 }
-if (!is_admin() && !empty($currUser['SellerID'])) {
-    $whereConditions[] = "pl.SellerID = " . (int)$currUser['SellerID'];
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $whereConditions[] = "pl.SellerID = " . (int)$sellerId;
 }
 $whereSql = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
 
@@ -26,7 +26,12 @@ $sql = "SELECT li.*, pl.Title, pl.Price
 
 $result = $conn->query($sql);
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

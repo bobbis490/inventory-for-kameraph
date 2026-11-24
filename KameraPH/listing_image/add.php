@@ -30,13 +30,13 @@ if (is_dir($uploadsDir)) {
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $listingID = (int)($_POST['ListingID'] ?? 0);
     $currUser = current_user();
-    if (!is_admin() && !empty($currUser['SellerID'])) {
+    if (!is_admin()) {
         $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
         $chkOwner->bind_param("i", $listingID);
         $chkOwner->execute();
         $lRow = $chkOwner->get_result()->fetch_assoc();
         $chkOwner->close();
-        if (!$lRow || (int)$lRow['SellerID'] !== (int)$currUser['SellerID']) {
+        if (!$lRow || !can_edit_listing(['SellerID' => $lRow['SellerID']])) {
             $message = "Access denied: you can only upload photos to listings belonging to your store.";
         }
     }
@@ -127,8 +127,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 
 $currUser = current_user();
-if (!is_admin() && !empty($currUser['SellerID'])) {
-    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$currUser['SellerID'] . " ORDER BY Title ASC");
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
 } else {
     $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
 }

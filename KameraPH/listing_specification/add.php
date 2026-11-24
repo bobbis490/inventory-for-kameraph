@@ -16,39 +16,57 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $specDefID = (int)($_POST['SpecDefID'] ?? 0);
     $specValue = trim($_POST['SpecValue'] ?? '');
 
-    if ($listingID <= 0) {
-        $message = "Please select a product listing.";
-    } elseif ($specDefID <= 0) {
-        $message = "Please select a specification.";
-    } elseif ($specValue === "") {
-        $message = "Specification value is required.";
-    } else {
-        // Check for existing duplicate specification for this listing
-        $check = $conn->prepare("SELECT ListingSpecID FROM listing_specification WHERE ListingID = ? AND SpecDefID = ?");
-        $check->bind_param("ii", $listingID, $specDefID);
-        $check->execute();
-        if ($check->get_result()->num_rows > 0) {
-            $message = "This specification is already defined for this listing. Please edit the existing value instead.";
-            $check->close();
+    if (!is_admin()) {
+        $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+        $chkOwner->bind_param("i", $listingID);
+        $chkOwner->execute();
+        $lRow = $chkOwner->get_result()->fetch_assoc();
+        $chkOwner->close();
+        if (!$lRow || !can_edit_listing(['SellerID' => $lRow['SellerID']])) {
+            $message = "Access denied: you can only add specifications to listings belonging to your store.";
+        }
+    }
+
+    if ($message === "") {
+        if ($listingID <= 0) {
+            $message = "Please select a product listing.";
+        } elseif ($specDefID <= 0) {
+            $message = "Please select a specification.";
+        } elseif ($specValue === "") {
+            $message = "Specification value is required.";
         } else {
-            $check->close();
-
-            $stmt = $conn->prepare("INSERT INTO listing_specification (ListingID, SpecDefID, SpecValue) VALUES (?, ?, ?)");
-            $stmt->bind_param("iis", $listingID, $specDefID, $specValue);
-
-            if ($stmt->execute()) {
-                $stmt->close();
-                flash('success', "Specification added successfully!");
-                redirect("product_listing/view.php?id={$listingID}");
+            // Check for existing duplicate specification for this listing
+            $check = $conn->prepare("SELECT ListingSpecID FROM listing_specification WHERE ListingID = ? AND SpecDefID = ?");
+            $check->bind_param("ii", $listingID, $specDefID);
+            $check->execute();
+            if ($check->get_result()->num_rows > 0) {
+                $message = "This specification is already defined for this listing. Please edit the existing value instead.";
+                $check->close();
             } else {
-                $message = "Error adding specification: " . $stmt->error;
-                $stmt->close();
+                $check->close();
+
+                $stmt = $conn->prepare("INSERT INTO listing_specification (ListingID, SpecDefID, SpecValue) VALUES (?, ?, ?)");
+                $stmt->bind_param("iis", $listingID, $specDefID, $specValue);
+
+                if ($stmt->execute()) {
+                    $stmt->close();
+                    flash('success', "Specification added successfully!");
+                    redirect("product_listing/view.php?id={$listingID}");
+                } else {
+                    $message = "Error adding specification: " . $stmt->error;
+                    $stmt->close();
+                }
             }
         }
     }
 }
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 
 $listingCatID = 0;
 if ($listingID > 0) {

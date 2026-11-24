@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['ListingID'])) {
     if ($row) {
         $title = $row['Title'];
         // Ownership check
-        if (!is_admin() && (int)$row['SellerID'] !== (int)($currUser['SellerID'] ?? 0)) {
+        if (!is_admin() && !can_edit_listing($row)) {
             flash('danger', 'Access denied. You can only delete listings belonging to your store.');
             redirect('product_listing/index.php');
         }

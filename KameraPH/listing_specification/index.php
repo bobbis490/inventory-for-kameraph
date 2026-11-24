@@ -7,10 +7,15 @@ $pageTitle = 'Listing Specifications';
 $activeMenu = 'listing_specification';
 
 $listingFilter = isset($_GET['listing_id']) ? (int)$_GET['listing_id'] : 0;
-$whereSql = "";
+$whereConditions = [];
 if ($listingFilter > 0) {
-    $whereSql = "WHERE ls.ListingID = {$listingFilter}";
+    $whereConditions[] = "ls.ListingID = {$listingFilter}";
 }
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $whereConditions[] = "pl.SellerID = " . (int)$sellerId;
+}
+$whereSql = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
 
 $sql = "SELECT ls.*, pl.Title, sd.SpecName, sd.DataType, sd.Unit, c.CategoryName
         FROM listing_specification ls
@@ -21,7 +26,13 @@ $sql = "SELECT ls.*, pl.Title, sd.SpecName, sd.DataType, sd.Unit, c.CategoryName
         ORDER BY ls.ListingID DESC, sd.SpecName ASC";
 
 $result = $conn->query($sql);
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

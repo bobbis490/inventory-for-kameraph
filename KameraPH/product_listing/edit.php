@@ -26,7 +26,7 @@ if (!$listing) {
 }
 
 // Ownership check: if seller and not admin, can only edit their own listings
-if (!is_admin() && (int)$listing['SellerID'] !== (int)($currUser['SellerID'] ?? 0)) {
+if (!is_admin() && !can_edit_listing($listing)) {
     flash('danger', 'Access denied. You can only edit listings belonging to your store.');
     redirect('product_listing/index.php');
 }
@@ -34,7 +34,11 @@ if (!is_admin() && (int)$listing['SellerID'] !== (int)($currUser['SellerID'] ?? 
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $sellerID = is_admin() ? (int)($_POST['SellerID'] ?? $listing['SellerID']) : (int)$listing['SellerID'];
+    // Preserve original seller ownership: editing product details must NOT strip user's privileges
+    $sellerID = (int)$listing['SellerID'];
+    if (is_admin() && !empty($_POST['reassign_seller']) && !empty($_POST['reassign_seller_id'])) {
+        $sellerID = (int)$_POST['reassign_seller_id'];
+    }
     $modelID = (int)($_POST['ModelID'] ?? 0);
     $title = trim($_POST['Title'] ?? '');
     $description = trim($_POST['Description'] ?? '');
@@ -133,9 +137,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $listing['SuspensionReason'] = $suspensionReason;
 }
 
-$sellerProfiles = null;
+$sellerProfiles = [];
 if (is_admin()) {
-    $sellerProfiles = $conn->query("SELECT SellerID, StoreName FROM seller_profile ORDER BY StoreName ASC");
+    $spRes = $conn->query("SELECT SellerID, StoreName FROM seller_profile ORDER BY StoreName ASC");
+    if ($spRes) {
+        $sellerProfiles = $spRes->fetch_all(MYSQLI_ASSOC);
+    }
 }
 
 // Fetch current store name
@@ -187,29 +194,35 @@ require_once __DIR__ . '/../includes/header.php';
                         <i class="bi bi-info-circle me-1 text-primary"></i> 1. Basic Listing Information
                     </h6>
                     <div class="row g-3 mb-4">
-                        <?php if (is_admin()): ?>
-                            <div class="col-md-4">
-                                <label for="SellerID" class="form-label fw-semibold">Seller Store <span class="text-danger">*</span></label>
-                                <select name="SellerID" id="SellerID" class="form-select" required>
-                                    <?php if ($sellerProfiles): ?>
-                                        <?php while ($sp = $sellerProfiles->fetch_assoc()): ?>
-                                            <option value="<?php echo $sp['SellerID']; ?>" <?php echo ($listing['SellerID'] == $sp['SellerID']) ? 'selected' : ''; ?>>
-                                                <?php echo sanitize($sp['StoreName']); ?> (#<?php echo $sp['SellerID']; ?>)
-                                            </option>
-                                        <?php endwhile; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                        <?php else: ?>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Seller Store</label>
-                                <div class="form-control bg-light d-flex align-items-center">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Seller Store (Owner)</label>
+                            <div class="form-control bg-light d-flex align-items-center justify-content-between">
+                                <div>
                                     <i class="bi bi-shop text-primary me-2"></i>
                                     <strong><?php echo sanitize($currentStoreName); ?></strong>
+                                    <span class="text-muted small ms-1">(#<?php echo (int)$listing['SellerID']; ?>)</span>
                                 </div>
-                                <input type="hidden" name="SellerID" value="<?php echo (int)$listing['SellerID']; ?>">
+                                <span class="badge bg-secondary">Owner</span>
                             </div>
-                        <?php endif; ?>
+                            <input type="hidden" name="SellerID" value="<?php echo (int)$listing['SellerID']; ?>">
+                            <?php if (is_admin()): ?>
+                                <div class="form-check mt-1">
+                                    <input class="form-check-input" type="checkbox" name="reassign_seller" value="1" id="reassignSellerCheck" onchange="document.getElementById('reassignSellerBox').style.display = this.checked ? 'block' : 'none';">
+                                    <label class="form-check-label small text-muted" for="reassignSellerCheck">
+                                        Reassign to another store (Admin override)
+                                    </label>
+                                </div>
+                                <div id="reassignSellerBox" class="mt-2" style="display: none;">
+                                    <select name="reassign_seller_id" class="form-select form-select-sm">
+                                        <?php foreach ($sellerProfiles as $sp): ?>
+                                            <option value="<?php echo $sp['SellerID']; ?>" <?php echo ((int)$listing['SellerID'] === (int)$sp['SellerID']) ? 'selected' : ''; ?>>
+                                                <?php echo sanitize($sp['StoreName']); ?> (#<?php echo $sp['SellerID']; ?>)
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                         <div class="col-md-8">
                             <label for="ModelID" class="form-label">Camera Model <span class="text-danger">*</span></label>
                             <select name="ModelID" id="ModelID" class="form-select" required>
@@ -298,6 +311,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <!-- Section 4: Status -->
+                    <?php if (is_admin()): ?>
                     <h6 class="fw-bold text-dark border-bottom pb-2 mb-3">
                         <i class="bi bi-shield-check me-1 text-warning"></i> 4. Status & Publication
                     </h6>
@@ -317,6 +331,15 @@ require_once __DIR__ . '/../includes/header.php';
                             <input type="text" name="SuspensionReason" id="SuspensionReason" class="form-control" value="<?php echo sanitize($listing['SuspensionReason'] ?? ''); ?>" placeholder="Only applicable if status is Suspended">
                         </div>
                     </div>
+                    <?php else: ?>
+                    <div class="alert alert-info d-flex align-items-start mb-4" role="alert">
+                        <i class="bi bi-info-circle-fill fs-5 me-3 mt-1 text-info flex-shrink-0"></i>
+                        <div>
+                            <strong>Review Process:</strong> Saving your edits will resubmit the listing as
+                            <strong>Pending Verification</strong> so our moderation team can verify the changes before they go live on the marketplace.
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="d-flex justify-content-between align-items-center pt-3 border-top">
                         <a href="view.php?id=<?php echo $id; ?>" class="btn btn-outline-secondary">

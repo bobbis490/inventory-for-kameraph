@@ -253,5 +253,72 @@ if (!function_exists('require_auth')) {
     }
 }
 
+if (!function_exists('get_current_seller_id')) {
+    function get_current_seller_id() {
+        $u = current_user();
+        if (!$u) return 0;
+        if (!empty($u['SellerID'])) return (int)$u['SellerID'];
+        if (!empty($u['UserID'])) {
+            global $conn;
+            if ($conn) {
+                $uid = (int)$u['UserID'];
+                $chk = $conn->query("SELECT SellerID FROM seller_profile WHERE UserID = {$uid} LIMIT 1");
+                if ($chk && $row = $chk->fetch_assoc()) {
+                    $sid = (int)$row['SellerID'];
+                    $_SESSION['user']['SellerID'] = $sid;
+                    return $sid;
+                }
+            }
+        }
+        return 0;
+    }
+}
+
+if (!function_exists('can_edit_listing')) {
+    function can_edit_listing($listing) {
+        if (is_admin()) return true;
+        $u = current_user();
+        if (!$u) return false;
+        $listingSellerId = is_array($listing) ? (int)($listing['SellerID'] ?? 0) : (int)$listing;
+        if ($listingSellerId <= 0) return false;
+
+        // 1. Direct session match
+        $sessSellerId = (int)($u['SellerID'] ?? 0);
+        if ($sessSellerId > 0 && $sessSellerId === $listingSellerId) {
+            return true;
+        }
+
+        // 2. Resolved seller ID match
+        $sellerId = get_current_seller_id();
+        if ($sellerId > 0 && $sellerId === $listingSellerId) {
+            return true;
+        }
+
+        // 3. Database ownership check by UserID
+        $uid = (int)($u['UserID'] ?? 0);
+        if ($uid > 0) {
+            global $conn;
+            if ($conn) {
+                $chk = $conn->query("SELECT SellerID FROM seller_profile WHERE UserID = {$uid} AND SellerID = {$listingSellerId} LIMIT 1");
+                if ($chk && $chk->num_rows > 0) {
+                    $_SESSION['user']['SellerID'] = $listingSellerId;
+                    return true;
+                }
+            }
+            try {
+                $pdo = Database::connect();
+                $st = $pdo->prepare("SELECT SellerID FROM seller_profile WHERE UserID = ? AND SellerID = ? LIMIT 1");
+                $st->execute([$uid, $listingSellerId]);
+                if ($st->fetch()) {
+                    $_SESSION['user']['SellerID'] = $listingSellerId;
+                    return true;
+                }
+            } catch (Exception $e) {}
+        }
+
+        return false;
+    }
+}
+
 // Load Warehouse Inventory Helper Functions
 require_once __DIR__ . '/warehouse_functions.php';

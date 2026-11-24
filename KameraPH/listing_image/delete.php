@@ -21,13 +21,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['id'])) {
     $stmtImg->close();
 
     $currUser = current_user();
-    if (!is_admin() && !empty($currUser['SellerID'])) {
+    if (!is_admin()) {
         $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
         $chkOwner->bind_param("i", $redirectListing);
         $chkOwner->execute();
         $lRow = $chkOwner->get_result()->fetch_assoc();
         $chkOwner->close();
-        if (!$lRow || (int)$lRow['SellerID'] !== (int)$currUser['SellerID']) {
+        if (!$lRow || !can_edit_listing(['SellerID' => $lRow['SellerID']])) {
             flash('danger', 'Access denied.');
             redirect('product_listing/index.php');
         }

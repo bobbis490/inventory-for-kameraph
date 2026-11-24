@@ -23,6 +23,18 @@ if (!$specification) {
     redirect('listing_specification/index.php');
 }
 
+if (!is_admin()) {
+    $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+    $chkOwner->bind_param("i", $specification['ListingID']);
+    $chkOwner->execute();
+    $lRow = $chkOwner->get_result()->fetch_assoc();
+    $chkOwner->close();
+    if (!$lRow || !can_edit_listing(['SellerID' => $lRow['SellerID']])) {
+        flash('danger', 'Access denied: You do not own this listing specification.');
+        redirect('product_listing/index.php');
+    }
+}
+
 $message = "";
 $listingID = $specification['ListingID'];
 $specDefID = $specification['SpecDefID'];
@@ -33,23 +45,36 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $specDefID = (int)($_POST['SpecDefID'] ?? 0);
     $specValue = trim($_POST['SpecValue'] ?? '');
 
-    if ($listingID <= 0) {
-        $message = "Please select a product listing.";
-    } elseif ($specDefID <= 0) {
-        $message = "Please select a specification.";
-    } elseif ($specValue === "") {
-        $message = "Specification value is required.";
-    } else {
-        $stmt = $conn->prepare("UPDATE listing_specification SET ListingID = ?, SpecDefID = ?, SpecValue = ? WHERE ListingSpecID = ?");
-        $stmt->bind_param("iisi", $listingID, $specDefID, $specValue, $id);
+    if (!is_admin()) {
+        $chkTarget = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+        $chkTarget->bind_param("i", $listingID);
+        $chkTarget->execute();
+        $tRow = $chkTarget->get_result()->fetch_assoc();
+        $chkTarget->close();
+        if (!$tRow || !can_edit_listing(['SellerID' => $tRow['SellerID']])) {
+            $message = "Access denied: you can only assign specifications to listings belonging to your store.";
+        }
+    }
 
-        if ($stmt->execute()) {
-            $stmt->close();
-            flash('success', "Specification updated successfully!");
-            redirect("product_listing/view.php?id={$listingID}");
+    if ($message === "") {
+        if ($listingID <= 0) {
+            $message = "Please select a product listing.";
+        } elseif ($specDefID <= 0) {
+            $message = "Please select a specification.";
+        } elseif ($specValue === "") {
+            $message = "Specification value is required.";
         } else {
-            $message = "Error updating specification: " . $stmt->error;
-            $stmt->close();
+            $stmt = $conn->prepare("UPDATE listing_specification SET ListingID = ?, SpecDefID = ?, SpecValue = ? WHERE ListingSpecID = ?");
+            $stmt->bind_param("iisi", $listingID, $specDefID, $specValue, $id);
+
+            if ($stmt->execute()) {
+                $stmt->close();
+                flash('success', "Specification updated successfully!");
+                redirect("product_listing/view.php?id={$listingID}");
+            } else {
+                $message = "Error updating specification: " . $stmt->error;
+                $stmt->close();
+            }
         }
     }
 
@@ -58,7 +83,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $specification['SpecValue'] = $specValue;
 }
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 $specifications = $conn->query("
     SELECT sd.SpecDefID, sd.SpecName, sd.DataType, sd.Unit, c.CategoryName
     FROM spec_definition sd

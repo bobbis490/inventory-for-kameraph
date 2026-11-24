@@ -123,7 +123,7 @@ require_once __DIR__ . '/../includes/header.php';
 <div class="row g-4">
 <?php while ($row = $pendingListings->fetch_assoc()): ?>
     <div class="col-12">
-        <div class="card card-kamera shadow-sm border-start border-warning border-3">
+        <div class="card card-kamera review-queue-card shadow-sm border-start border-warning border-3">
             <div class="card-body">
                 <div class="row g-3 align-items-start">
 

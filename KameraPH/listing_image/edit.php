@@ -24,13 +24,13 @@ if (!$image) {
 }
 
 $currUser = current_user();
-if (!is_admin() && !empty($currUser['SellerID'])) {
+if (!is_admin()) {
     $chkOwner = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
     $chkOwner->bind_param("i", $image['ListingID']);
     $chkOwner->execute();
     $lRow = $chkOwner->get_result()->fetch_assoc();
     $chkOwner->close();
-    if (!$lRow || (int)$lRow['SellerID'] !== (int)$currUser['SellerID']) {
+    if (!$lRow || !can_edit_listing(['SellerID' => $lRow['SellerID']])) {
         flash('danger', 'Access denied: You do not own this listing photo.');
         redirect('product_listing/index.php');
     }
@@ -59,6 +59,16 @@ if (is_dir($uploadsDir)) {
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $listingID = (int)($_POST['ListingID'] ?? 0);
+    if (!is_admin()) {
+        $chkTarget = $conn->prepare("SELECT SellerID FROM product_listing WHERE ListingID = ?");
+        $chkTarget->bind_param("i", $listingID);
+        $chkTarget->execute();
+        $tRow = $chkTarget->get_result()->fetch_assoc();
+        $chkTarget->close();
+        if (!$tRow || !can_edit_listing(['SellerID' => $tRow['SellerID']])) {
+            $message = "Access denied: you can only assign photos to listings belonging to your store.";
+        }
+    }
     $urlInput = trim($_POST['ImageURL'] ?? '');
     $existingSelect = trim($_POST['ExistingImage'] ?? '');
     $displayOrder = (int)($_POST['DisplayOrder'] ?? 1);
@@ -149,7 +159,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $image['IsPrimary'] = $isPrimary;
 }
 
-$listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+if (!is_admin()) {
+    $sellerId = get_current_seller_id();
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing WHERE SellerID = " . (int)$sellerId . " ORDER BY Title ASC");
+} else {
+    $listings = $conn->query("SELECT ListingID, Title FROM product_listing ORDER BY Title ASC");
+}
 
 require_once __DIR__ . '/../includes/header.php';
 ?>

@@ -14,7 +14,6 @@
                 <a href="<?php echo base_url('product_listing/index.php'); ?>">Listings</a>
                 <a href="<?php echo base_url('warehouse/index.php'); ?>">Warehouse</a>
                 <a href="<?php echo base_url('product_verification/index.php'); ?>">Verifications</a>
-                <a href="<?php echo base_url('api/'); ?>">API</a>
             </div>
         </div>
     </div>
@@ -26,6 +25,8 @@
 <script src="<?php echo asset_url('js/engagement.js') . '?v=' . @filemtime(__DIR__ . '/../assets/js/engagement.js'); ?>"></script>
 <!-- KameraPH Theme Switcher -->
 <script src="<?php echo asset_url('js/theme.js') . '?v=' . @filemtime(__DIR__ . '/../assets/js/theme.js'); ?>"></script>
+<!-- KameraPH Animation Interactions -->
+<script src="<?php echo asset_url('js/animations.js') . '?v=' . @filemtime(__DIR__ . '/../assets/js/animations.js'); ?>"></script>
 
 <!-- Global Form Confirmation & Image Preview Script -->
 <script>

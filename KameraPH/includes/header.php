@@ -20,6 +20,8 @@ $pageTitle = isset($pageTitle) ? $pageTitle . ' - KameraPH' : 'KameraPH - Camera
     <link rel="stylesheet" href="<?php echo asset_url('css/style.css') . '?v=' . @filemtime(__DIR__ . '/../assets/css/style.css'); ?>">
     <!-- KameraPH Theme (Night/Light Mode) -->
     <link rel="stylesheet" href="<?php echo asset_url('css/theme.css') . '?v=' . @filemtime(__DIR__ . '/../assets/css/theme.css'); ?>">
+    <!-- KameraPH Animations (Catalog, Listing & Operations) -->
+    <link rel="stylesheet" href="<?php echo asset_url('css/animations.css') . '?v=' . @filemtime(__DIR__ . '/../assets/css/animations.css'); ?>">
 </head>
 <body>
 
